@@ -3,6 +3,16 @@ import dnnlib
 from dnnlib import tflib
 import numpy as np
 from PIL import Image
+import argparse
+
+parser = argparse.ArgumentParser(description='Saving w and dataset')
+
+parser.add_argument('--dataset', type=str, default='cats',choices = ["bedroom", "cats"],
+                        help='Dataset')
+parser.add_argument('--total_images', type=int, default=50000,
+                        help='Size of images to generate')
+
+args = parser.parse_args()
 
 tflib.init_tf()
 
@@ -10,8 +20,12 @@ def save_image(img, fname) :
     img = Image.fromarray(img.astype(np.uint8))
     img.save(fname)
 
-# fname = "bedroom_model/karras2019stylegan-bedrooms-256x256.pkl"
-fname = "cats_model/karras2019stylegan-cats-256x256.pkl"
+dataset = args.dataset
+
+if args.dataset == "bedroom":
+    fname = "bedroom_model/karras2019stylegan-bedrooms-256x256.pkl"
+else:
+    fname = "cats_model/karras2019stylegan-cats-256x256.pkl"
 with open(fname, "rb") as f :
     _G, _D, Gs = pickle.load(f)
 
@@ -43,8 +57,8 @@ print(latent_arr.shape)
 print(images_all.shape)
 # images_all = np.array(images_all)
 # print(images_all.shape, np.min(images_all), np.max(images_all))
-np.save("feats_w/cats.npy", latent_arr)
-np.save("images_cats/images_50000.npy", images_all)
+np.save("feats_w/" + str(dataset) + ".npy", latent_arr)
+np.save("images_" + str(dataset) + "/images_50000.npy", images_all)
 
 # save_image(images[0], "images_bedroom/img0.png")
 # save_image(images[1], "images_bedroom/img1.png")

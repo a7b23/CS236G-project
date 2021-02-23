@@ -43,5 +43,5 @@ images_all = np.array(images_all)
 print(images_all.shape, np.min(images_all), np.max(images_all))
 np.save("images_cats/images.npy", images_all)
 
-save_image(images[0], "images_bedroom/img0.png")
-save_image(images[1], "images_bedroom/img1.png")
+#save_image(images[0], "images_bedroom/img0.png")
+#save_image(images[1], "images_bedroom/img1.png")
