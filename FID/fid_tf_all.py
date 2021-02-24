@@ -260,7 +260,6 @@ def calculate_activation_statistics_from_files(files, sess, batch_size=50, verbo
 def check_or_download_inception(inception_path):
     ''' Checks if the path to the inception file is valid, or downloads
         the file if it is not present. '''
-    INCEPTION_URL = 'http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz'
     if inception_path is None:
         inception_path = '/tmp'
     inception_path = pathlib.Path(inception_path)
@@ -269,6 +268,7 @@ def check_or_download_inception(inception_path):
         print("Downloading Inception model")
         from urllib import request
         import tarfile
+        INCEPTION_URL = 'http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz'        
         fn, _ = request.urlretrieve(INCEPTION_URL)
         with tarfile.open(fn, mode='r') as f:
             f.extract('classify_image_graph_def.pb', str(model_file.parent))
@@ -277,7 +277,7 @@ def check_or_download_inception(inception_path):
 
 def _handle_path(path, sess, low_profile=False):
     #if path.endswith('.npz'):
-    if path.endswith('.npz') and not "sample" in path:
+    if path.endswith('.npz') and "sample" not in path:
         f = np.load(path)
         try:
             m, s = f['mu'][:], f['sigma'][:]
