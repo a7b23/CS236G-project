@@ -13,27 +13,27 @@ class Generator(nn.Module):
         self.main = nn.Sequential(
             nn.ConvTranspose2d(self.latent_size, 256, 4, stride=1, bias=False),
             nn.BatchNorm2d(256),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(inplace=False),
 
             nn.ConvTranspose2d(256, 128, 4, stride=2, bias=False),
             nn.BatchNorm2d(128),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(inplace=False),
 
             nn.ConvTranspose2d(128, 64, 4, stride=1, bias=False),
             nn.BatchNorm2d(64),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(inplace=False),
 
             nn.ConvTranspose2d(64, 32, 4, stride=2, bias=False),
             nn.BatchNorm2d(32),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(inplace=False),
 
             nn.ConvTranspose2d(32, 32, 5, stride=1, bias=False),
             nn.BatchNorm2d(32),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(inplace=False),
 
             nn.ConvTranspose2d(32, 32, 1, stride=1, bias=False),
             nn.BatchNorm2d(32),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(inplace=False),
 
             nn.ConvTranspose2d(32, 3, 1, stride=1, bias=False)
         )
@@ -159,3 +159,46 @@ class Discriminator(nn.Module):
         if self.output_size == 1:
             output = F.sigmoid(output)
         return output.squeeze(), output_features.view(x.size()[0], -1)
+
+
+class DiscriminatorImage(nn.Module):
+
+    def __init__(self, dropout, output_size=10):
+        super(DiscriminatorImage, self).__init__()
+        self.dropout = dropout
+        self.output_size = output_size
+
+        self.infer_x = nn.Sequential(
+            nn.Conv2d(3, 32, 5, stride=1, bias=True),
+            nn.LeakyReLU(inplace=False),
+            nn.Dropout2d(p=self.dropout),
+
+            nn.Conv2d(32, 64, 4, stride=2, bias=False),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(inplace=False),
+            nn.Dropout2d(p=self.dropout),
+
+            nn.Conv2d(64, 128, 4, stride=1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(inplace=False),
+            nn.Dropout2d(p=self.dropout),
+
+            nn.Conv2d(128, 256, 4, stride=2, bias=False),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(inplace=False),
+            nn.Dropout2d(p=self.dropout),
+
+            nn.Conv2d(256, 512, 4, stride=1, bias=False),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(inplace=False),
+            nn.Dropout2d(p=self.dropout)
+        )
+
+        self.final = nn.Conv2d(512, self.output_size, 1, stride=1, bias=True)
+
+    def forward(self, x):
+        output_x = self.infer_x(x)
+        output = self.final(output_x)
+        if self.output_size == 1:
+            output = F.sigmoid(output)
+        return output.squeeze(), None
