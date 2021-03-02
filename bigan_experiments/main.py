@@ -97,7 +97,7 @@ elif opt.dataset == 'cifar_mnist':
                       transform=transforms.Compose([
                           transforms.ToTensor()
                       ])),
-        batch_size=batch_size, shuffle=True)
+        batch_size=batch_size, shuffle=True, num_workers=16)
 else:
     raise NotImplementedError
 
@@ -173,7 +173,7 @@ for epoch in range(num_epochs):
         loss_g.backward()
         optimizerG.step()
 
-        if i % 5 == 0:
+        if i % 50 == 0:
             print("Epoch :", epoch, "Iter :", i, "D Loss :", loss_d.item(), "G loss :", loss_g.item(),
                   "D(x) :", output_real.mean().item(), "D(G(x)) :", output_fake.mean().item(),
                   "DI(x) :", dix, "DI(G(x)) :", digx)
@@ -182,7 +182,7 @@ for epoch in range(num_epochs):
                        "DI(x)": dix, "DI(G(x))": digx},
                       step=step)
 
-        if i % 10 == 0:
+        if i % 100 == 0:
             vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake.png' % (opt.save_image_dir))
             vutils.save_image(d_real.cpu().data[:16, ], './%s/real.png' % (opt.save_image_dir))
             wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]],
