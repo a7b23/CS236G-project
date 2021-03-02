@@ -7,7 +7,7 @@ import torch.utils.data
 from sklearn.svm import LinearSVC
 from model import *
 from cifar_dataset_mnist_eval import CIFAR10_MNIST
-
+join=os.path.join
 
 batch_size = 64
 latent_size = 256
@@ -15,6 +15,8 @@ cuda_device = "0"
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', required=True, help='cifar10 | svhn')
+parser.add_argument('--feat_dir', required=True, help='features directory')
+
 parser.add_argument('--dataroot', default = "/atlas/u/a7b23/data", help='path to dataset')
 parser.add_argument('--use_cuda', type=bool, default=True)
 parser.add_argument('--model_path', required=True)
@@ -82,14 +84,14 @@ if __name__ == "__main__":
                           transform=transforms.Compose([
                               transforms.ToTensor()
                           ])),
-            batch_size=batch_size, shuffle=True)
+            batch_size=batch_size, shuffle=False)
 
         test_loader = torch.utils.data.DataLoader(
             datasets.SVHN(root=opt.dataroot, split='train', download=True,
                           transform=transforms.Compose([
                               transforms.ToTensor()
                           ])),
-            batch_size=batch_size, shuffle=True)
+            batch_size=batch_size, shuffle=False)
 
     elif opt.dataset == 'cifar10':
         train_loader = torch.utils.data.DataLoader(
@@ -97,14 +99,14 @@ if __name__ == "__main__":
                              transform=transforms.Compose([
                                  transforms.ToTensor()
                              ])),
-            batch_size=batch_size, shuffle=True)
+            batch_size=batch_size, shuffle=False)
 
         test_loader = torch.utils.data.DataLoader(
             datasets.CIFAR10(root=opt.dataroot, train=False, download=True,
                              transform=transforms.Compose([
                                  transforms.ToTensor()
                              ])),
-            batch_size=batch_size, shuffle=True)
+            batch_size=batch_size, shuffle=False)
 
     elif opt.dataset == "cifar_mnist_cifar":
         train_loader = torch.utils.data.DataLoader(
@@ -112,14 +114,14 @@ if __name__ == "__main__":
                       transform=transforms.Compose([
                           transforms.ToTensor()
                       ])),
-        batch_size=batch_size, shuffle=True)
+        batch_size=batch_size, shuffle=False)
 
         test_loader = torch.utils.data.DataLoader(
         CIFAR10_MNIST(root=opt.dataroot, aug_type = 1, train=False, download=False, dataset = "cifar",
                       transform=transforms.Compose([
                           transforms.ToTensor()
                       ])),
-        batch_size=batch_size, shuffle=True)
+        batch_size=batch_size, shuffle=False)
 
     elif opt.dataset == "cifar_mnist_mnist":
         train_loader = torch.utils.data.DataLoader(
@@ -127,20 +129,22 @@ if __name__ == "__main__":
                       transform=transforms.Compose([
                           transforms.ToTensor()
                       ])),
-        batch_size=batch_size, shuffle=True)
+        batch_size=batch_size, shuffle=False)
 
         test_loader = torch.utils.data.DataLoader(
         CIFAR10_MNIST(root=opt.dataroot, aug_type = 1, train=False, download=False, dataset = "mnist",
                       transform=transforms.Compose([
                           transforms.ToTensor()
                       ])),
-        batch_size=batch_size, shuffle=True)
+        batch_size=batch_size, shuffle=False)
 
     else:
         raise NotImplementedError
 
 
+    if not os.path.exists(opt.feat_dir):
+      os.makedirs(opt.feat_dir)
 
-    get_embeddings(train_loader, netE, "feats/" + opt.dataset + "_train_feats.npy")
-    get_embeddings(test_loader, netE, "feats/" + opt.dataset + "_test_feats.npy")
+    get_embeddings(train_loader, netE, join(opt.feat_dir, opt.dataset + "_train_feats.npy"))
+    get_embeddings(test_loader, netE, join(opt.feat_dir, opt.dataset + "_test_feats.npy"))
 

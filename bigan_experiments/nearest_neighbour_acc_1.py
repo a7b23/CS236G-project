@@ -19,7 +19,7 @@ dataset = args.dataset
 feat_dir = args.feat_dir
 # labels_dir = feat_dir
 
-labels_dir = "feats"
+labels_dir = args.feat_dir
 
 # train_features = np.load(join(feat_dir, "train_feats_ae_5_moco_load.npy"))
 # val_features = np.load(join(feat_dir, "val_feats_ae_5_moco_load.npy"))
