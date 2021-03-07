@@ -14,7 +14,8 @@ latent_size = 256
 cuda_device = "0"
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', required=True, help='cifar10 | svhn')
+parser.add_argument('--dataset', required=True, help='cifar10 | svhn | cifar_mnist_cifar | cifar_mnist_mnist',
+                      choices = ['cifar10', 'svhn', 'cifar_mnist_mnist', 'cifar_mnist_cifar'])
 parser.add_argument('--feat_dir', required=True, help='features directory')
 
 parser.add_argument('--dataroot', default = "/atlas/u/a7b23/data", help='path to dataset')
