@@ -193,15 +193,12 @@ if __name__ == "__main__":
 
     encoder = Encoder(256)
     x = torch.randn((8, 3, 64, 64))
-    out,_,_,_ = encoder(x)
+    out, _, _, _ = encoder(x)
     print(out.size())
 
-    decoder = Discriminator(256, dropout = 0.5, output_size = 1)
+    decoder = Discriminator(256, dropout=0.5, output_size=1)
 
     x = torch.randn((8, 3, 64, 64))
     z = torch.randn((8, 256, 1, 1))
-    out, _ = decoder(x ,z)
+    out, _ = decoder(x, z)
     print(out.size())
-
-
-

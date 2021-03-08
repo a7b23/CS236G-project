@@ -1,16 +1,18 @@
 import argparse
-from torchvision import datasets, transforms
-import torch.optim as optim
-from torch.autograd import Variable
-import torchvision.utils as vutils
-# from model import *
 import os
+
+import torch.optim as optim
+import torchvision.utils as vutils
+from torch.autograd import Variable
+from torchvision import datasets, transforms
+
 from cifar_dataset_mnist import CIFAR10_MNIST
-import wandb
+from model import *
 
-
+batch_size = 100
 lr = 1e-4
 latent_size = 256
+num_epochs = 100
 cuda_device = "0"
 
 
@@ -19,30 +21,20 @@ def boolean_string(s):
         raise ValueError('Not a valid boolean string')
     return s == 'True'
 
+
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', required=True, help='cifar10 | svhn | cifar_mnist',
-                                    choices = ["cifar10", "svhn", "cifar_mnist", "timagenet"])
+parser.add_argument('--dataset', required=True, choices=["cifar10", "svhn", "cifar_mnist"],
+                    help='cifar10 | svhn | cifar_mnist')
+parser.add_argument('--alpha', default=0.25, type=float, help='the weightage of the fake loss')
+
 parser.add_argument('--dataroot', required=True, help='path to dataset')
 parser.add_argument('--use_cuda', type=boolean_string, default=True)
-parser.add_argument('--cuda_device', type=str, default="0")
-parser.add_argument('--batch_size', type=int, default=100)
-parser.add_argument('--num_epochs', type=int, default=100)
-parser.add_argument('--alpha', type=float, default=0.5)
 parser.add_argument('--save_model_dir', required=True)
 parser.add_argument('--save_image_dir', required=True)
 
 opt = parser.parse_args()
-cuda_device = opt.cuda_device
-batch_size = opt.batch_size
-num_epochs = opt.num_epochs
+
 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
-
-if not opt.dataset == "timagenet":
-    from model import *
-else:
-    from model_timagenet import *
-
-wandb.init(project="cs236g-bigan", entity="a7b23", dir='./wandb', config=opt)
 print(opt)
 
 if not os.path.exists(opt.save_image_dir):
@@ -50,6 +42,7 @@ if not os.path.exists(opt.save_image_dir):
 
 if not os.path.exists(opt.save_model_dir):
     os.makedirs(opt.save_model_dir)
+
 
 def tocuda(x):
     if opt.use_cuda:
@@ -88,28 +81,21 @@ if opt.dataset == 'svhn':
                       transform=transforms.Compose([
                           transforms.ToTensor()
                       ])),
-        batch_size=batch_size, shuffle=True, num_workers=8)
+        batch_size=batch_size, shuffle=True)
 elif opt.dataset == 'cifar10':
     train_loader = torch.utils.data.DataLoader(
         datasets.CIFAR10(root=opt.dataroot, train=True, download=True,
-                      transform=transforms.Compose([
-                          transforms.ToTensor()
-                      ])),
-        batch_size=batch_size, shuffle=True, num_workers=8)
+                         transform=transforms.Compose([
+                             transforms.ToTensor()
+                         ])),
+        batch_size=batch_size, shuffle=True)
 elif opt.dataset == 'cifar_mnist':
     train_loader = torch.utils.data.DataLoader(
-        CIFAR10_MNIST(root=opt.dataroot, aug_type = 1, train=True, download=False,
+        CIFAR10_MNIST(root=opt.dataroot, aug_type=1, train=True, download=False,
                       transform=transforms.Compose([
                           transforms.ToTensor()
                       ])),
-        batch_size=batch_size, shuffle=True, num_workers=8)
-elif opt.dataset == "timagenet":
-    train_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(root="/atlas/u/tsong/data/timagenet/train/",
-                      transform=transforms.Compose([
-                          transforms.ToTensor()
-                      ])),
-        batch_size=batch_size, shuffle=True, num_workers=8)
+        batch_size=batch_size, shuffle=True)
 else:
     raise NotImplementedError
 
@@ -121,15 +107,16 @@ netE.apply(weights_init)
 netG.apply(weights_init)
 netD.apply(weights_init)
 
-optimizerG = optim.Adam([{'params' : netE.parameters()},
-                         {'params' : netG.parameters()}], lr=lr, betas=(0.5,0.999))
+optimizerG = optim.Adam([{'params': netE.parameters()},
+                         {'params': netG.parameters()}], lr=lr, betas=(0.5, 0.999))
 optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(0.5, 0.999))
 
 criterion = nn.BCELoss()
 
-def get_perm(l) :
+
+def get_perm(l):
     perm = torch.randperm(l)
-    while torch.all(torch.eq(perm, torch.arange(l))) :
+    while torch.all(torch.eq(perm, torch.arange(l))):
         perm = torch.randperm(l)
     return perm
 
@@ -138,7 +125,7 @@ for epoch in range(num_epochs):
 
     i = 0
     for (data, target) in train_loader:
-        step = epoch * len(train_loader) + i
+
         real_label = Variable(tocuda(torch.ones(batch_size)))
         fake_label = Variable(tocuda(torch.zeros(batch_size)))
 
@@ -171,14 +158,12 @@ for epoch in range(num_epochs):
         d_real_fake = d_real.clone()[shuff_indices]
 
         output_real_fake, _ = netD(d_real_fake + noise3, output_z.view(batch_size, latent_size, 1, 1))
-        
+
         output_fake, _ = netD(d_fake + noise2, z_fake)
 
         loss_d = criterion(output_real, real_label)
-        if opt.alpha <= 1.0:
-            loss_d += (opt.alpha*criterion(output_fake, fake_label) + (1.0 - opt.alpha)*criterion(output_real_fake, fake_label))
-        else:
-            loss_d += (criterion(output_fake, fake_label) + (opt.alpha - 1.0)*criterion(output_real_fake, fake_label))
+        loss_d += (opt.alpha * criterion(output_fake, fake_label) + (1.0 - opt.alpha) * criterion(output_real_fake,
+                                                                                                  fake_label))
         loss_g = criterion(output_fake, real_label) + criterion(output_real, fake_label)
 
         if loss_g.item() < 3.5:
@@ -190,18 +175,13 @@ for epoch in range(num_epochs):
         loss_g.backward()
         optimizerG.step()
 
-        if i % 50 == 0:
+        if i % 1 == 0:
             print("Epoch :", epoch, "Iter :", i, "D Loss :", loss_d.item(), "G loss :", loss_g.item(),
                   "D(x) :", output_real.mean().item(), "D(G(x)) :", output_fake.mean().item())
-            wandb.log({"Epoch": epoch, "Iter": i, "D Loss": loss_d.item(), "G loss": loss_g.item(),
-                       "D(x)": output_real.mean().item(), "D(G(x))": output_fake.mean().item()},
-                      step=step)
 
         if i % 50 == 0:
             vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake.png' % (opt.save_image_dir))
-            vutils.save_image(d_real.cpu().data[:16, ], './%s/real.png'% (opt.save_image_dir))
-            wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]],
-                       'reals': [wandb.Image(i) for i in d_real.cpu().data[:16, ]]}, step=step)
+            vutils.save_image(d_real.cpu().data[:16, ], './%s/real.png' % (opt.save_image_dir))
 
         i += 1
 
@@ -211,6 +191,3 @@ for epoch in range(num_epochs):
         torch.save(netD.state_dict(), './%s/netD_epoch_%d.pth' % (opt.save_model_dir, epoch))
 
         vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake_%d.png' % (opt.save_image_dir, epoch))
-        wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]]}, step=step)
-
-

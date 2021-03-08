@@ -1,11 +1,11 @@
 import argparse
-from torchvision import datasets, transforms
-import torch.optim as optim
-from torch.autograd import Variable
-import torchvision.utils as vutils
-from model import *
 import os
+
+import torchvision.utils as vutils
+from torchvision import datasets, transforms
+
 from cifar_dataset_mnist import CIFAR10_MNIST
+from model import *
 
 batch_size = 100
 lr = 1e-4
@@ -18,6 +18,7 @@ def boolean_string(s):
     if s not in {'False', 'True'}:
         raise ValueError('Not a valid boolean string')
     return s == 'True'
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', required=True, help='cifar10 | svhn')
@@ -36,6 +37,7 @@ if not os.path.exists(opt.save_image_dir):
 
 if not os.path.exists(opt.save_model_dir):
     os.makedirs(opt.save_model_dir)
+
 
 def tocuda(x):
     if opt.use_cuda:
@@ -78,13 +80,13 @@ if opt.dataset == 'svhn':
 elif opt.dataset == 'cifar10':
     train_loader = torch.utils.data.DataLoader(
         datasets.CIFAR10(root=opt.dataroot, train=True, download=True,
-                      transform=transforms.Compose([
-                          transforms.ToTensor()
-                      ])),
+                         transform=transforms.Compose([
+                             transforms.ToTensor()
+                         ])),
         batch_size=batch_size, shuffle=True)
 elif opt.dataset == 'cifar_mnist':
     train_loader = torch.utils.data.DataLoader(
-        CIFAR10_MNIST(root=opt.dataroot, aug_type = 1, train=True, download=False,
+        CIFAR10_MNIST(root=opt.dataroot, aug_type=1, train=True, download=False,
                       transform=transforms.Compose([
                           transforms.ToTensor()
                       ])),
@@ -92,10 +94,6 @@ elif opt.dataset == 'cifar_mnist':
 else:
     raise NotImplementedError
 
-
-
-for i, (x,_) in enumerate(train_loader):
+for i, (x, _) in enumerate(train_loader):
     vutils.save_image(x, "cifar_mnist.png")
     break
-
-

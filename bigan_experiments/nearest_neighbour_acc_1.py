@@ -1,19 +1,18 @@
-import numpy as np
-from sklearn.metrics.pairwise import euclidean_distances
-from sklearn.metrics.pairwise import cosine_similarity
-from scipy import stats
-import os
-import sys
 import argparse
+import os
 
-join=os.path.join
+import numpy as np
+from scipy import stats
+from sklearn.metrics.pairwise import cosine_similarity
+
+join = os.path.join
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', required=True, help='cifar10 | svhn | timagenet | cifar_mnist_cifar | cifar_mnist_mnist')
-parser.add_argument('--feat_dir', default = "feats", help='path to dataset')
+parser.add_argument('--dataset', required=True,
+                    help='cifar10 | svhn | timagenet | cifar_mnist_cifar | cifar_mnist_mnist')
+parser.add_argument('--feat_dir', default="feats", help='path to dataset')
 
 args = parser.parse_args()
-
 
 dataset = args.dataset
 feat_dir = args.feat_dir
@@ -55,22 +54,16 @@ train_labels = train_labels[indices]
 # distances = euclidean_distances(val_features, train_features)
 distances = -cosine_similarity(val_features, train_features)
 
-pred_indices = np.argsort(distances, axis=-1)[:,:top_k]
+pred_indices = np.argsort(distances, axis=-1)[:, :top_k]
 
 pred_labels = train_labels[pred_indices]
 
 top_k = np.arange(0, 101, 5)
 top_k[0] = 1
 for k in top_k:
+    out = stats.mode(pred_labels[:, :k], axis=1).mode
 
-	out = stats.mode(pred_labels[:,:k],axis=1).mode
+    labels = np.array([val[0] for val in out])
 
-	labels = np.array([val[0] for val in out])
-
-	# print(pred_labels.shape, val_labels.shape)
-	print(k, np.mean(np.equal(labels, val_labels)))
-
-
-
-
-
+    # print(pred_labels.shape, val_labels.shape)
+    print(k, np.mean(np.equal(labels, val_labels)))

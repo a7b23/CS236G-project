@@ -1,13 +1,14 @@
 import argparse
-from torchvision import datasets, transforms
-import torch.optim as optim
-from torch.autograd import Variable
-import torchvision.utils as vutils
 # from model import *
 import os
-from cifar_dataset_mnist import CIFAR10_MNIST
-import wandb
 
+import torch.optim as optim
+import torchvision.utils as vutils
+import wandb
+from torch.autograd import Variable
+from torchvision import datasets, transforms
+
+from cifar_dataset_mnist import CIFAR10_MNIST
 
 lr = 1e-4
 latent_size = 256
@@ -19,9 +20,10 @@ def boolean_string(s):
         raise ValueError('Not a valid boolean string')
     return s == 'True'
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', required=True, help='cifar10 | svhn | cifar_mnist',
-                                    choices = ["cifar10", "svhn", "cifar_mnist", "timagenet"])
+                    choices=["cifar10", "svhn", "cifar_mnist", "timagenet"])
 parser.add_argument('--dataroot', required=True, help='path to dataset')
 parser.add_argument('--use_cuda', type=boolean_string, default=True)
 parser.add_argument('--cuda_device', type=str, default="0")
@@ -42,7 +44,7 @@ if not opt.dataset == "timagenet":
     from model import *
 else:
     from model_timagenet import *
-    
+
 wandb.init(project="cs236g-bigan", entity="a7b23", dir='./wandb', config=opt)
 print(opt)
 
@@ -83,6 +85,7 @@ def get_log_odds(raw_marginals):
     marginals = torch.clamp(raw_marginals.mean(dim=0), 1e-7, 1 - 1e-7)
     return torch.log(marginals / (1 - marginals))
 
+
 class TwoCropsTransformClean:
     """Take two random crops of one image as the query and key."""
 
@@ -94,12 +97,13 @@ class TwoCropsTransformClean:
         q_clean = transforms.ToTensor()(x)
         return [q_clean, k]
 
+
 augs = transforms.Compose([transforms.RandomApply([
-                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
-            ], p=0.8),
-            transforms.RandomGrayscale(p=0.2),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor()])
+    transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
+], p=0.8),
+    transforms.RandomGrayscale(p=0.2),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor()])
 
 if opt.dataset == 'svhn':
     train_loader = torch.utils.data.DataLoader(
@@ -111,17 +115,17 @@ if opt.dataset == 'svhn':
 elif opt.dataset == 'cifar10':
     train_loader = torch.utils.data.DataLoader(
         datasets.CIFAR10(root=opt.dataroot, train=True, download=True,
-                      transform=TwoCropsTransformClean(augs)),       
+                         transform=TwoCropsTransformClean(augs)),
         batch_size=batch_size, shuffle=True, num_workers=8)
 elif opt.dataset == 'cifar_mnist':
     train_loader = torch.utils.data.DataLoader(
-        CIFAR10_MNIST(root=opt.dataroot, aug_type = 1, train=True, download=False,
+        CIFAR10_MNIST(root=opt.dataroot, aug_type=1, train=True, download=False,
                       transform=TwoCropsTransformClean(augs)),
         batch_size=batch_size, shuffle=True, num_workers=8)
 elif opt.dataset == "timagenet":
     train_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(root=opt.dataroot, 
-                      transform=TwoCropsTransformClean(augs)),
+        datasets.ImageFolder(root=opt.dataroot,
+                             transform=TwoCropsTransformClean(augs)),
         batch_size=batch_size, shuffle=True, num_workers=8)
 else:
     raise NotImplementedError
@@ -134,18 +138,18 @@ netE.apply(weights_init)
 netG.apply(weights_init)
 netD.apply(weights_init)
 
-optimizerG = optim.Adam([{'params' : netE.parameters()},
-                         {'params' : netG.parameters()}], lr=lr, betas=(0.5,0.999))
+optimizerG = optim.Adam([{'params': netE.parameters()},
+                         {'params': netG.parameters()}], lr=lr, betas=(0.5, 0.999))
 optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(0.5, 0.999))
 
 criterion = nn.BCELoss()
 
-def get_perm(l) :
+
+def get_perm(l):
     perm = torch.randperm(l)
-    while torch.all(torch.eq(perm, torch.arange(l))) :
+    while torch.all(torch.eq(perm, torch.arange(l))):
         perm = torch.randperm(l)
     return perm
-
 
 
 for epoch in range(num_epochs):
@@ -194,18 +198,17 @@ for epoch in range(num_epochs):
 
         output_real, _ = netD(d_real + noise1, output_z.view(batch_size, latent_size, 1, 1))
         output_real_aug, _ = netD(d_real_aug + noise1, output_z_aug.view(batch_size, latent_size, 1, 1))
-        
+
         shuff_indices = get_perm(d_real.size(0))
         d_real_fake = d_real.clone()[shuff_indices]
 
         output_real_fake, _ = netD(d_real_fake + noise3, output_z.view(batch_size, latent_size, 1, 1))
 
-
         output_fake, _ = netD(d_fake + noise2, z_fake)
 
-        loss_d = (1.0 - opt.alpha - opt.beta)*criterion(output_real, real_label) 
-        loss_d += opt.alpha*criterion(output_real_aug, real_label)
-        loss_d += opt.beta*criterion(output_real_fake, fake_label)
+        loss_d = (1.0 - opt.alpha - opt.beta) * criterion(output_real, real_label)
+        loss_d += opt.alpha * criterion(output_real_aug, real_label)
+        loss_d += opt.beta * criterion(output_real_fake, fake_label)
         # loss_d = criterion(output_real, real_label)
 
         loss_d += criterion(output_fake, fake_label)
@@ -229,7 +232,7 @@ for epoch in range(num_epochs):
 
         if i % 50 == 0:
             vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake.png' % (opt.save_image_dir))
-            vutils.save_image(d_real.cpu().data[:16, ], './%s/real.png'% (opt.save_image_dir))
+            vutils.save_image(d_real.cpu().data[:16, ], './%s/real.png' % (opt.save_image_dir))
             wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]],
                        'reals': [wandb.Image(i) for i in d_real.cpu().data[:16, ]]}, step=step)
         i += 1
@@ -241,6 +244,3 @@ for epoch in range(num_epochs):
 
         vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake_%d.png' % (opt.save_image_dir, epoch))
         wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]]}, step=step)
-
-
-

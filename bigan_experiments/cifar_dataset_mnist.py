@@ -61,7 +61,7 @@ class CIFAR10_MNIST(data.Dataset):
             new_img[8:8 + mnist_size, 8:8 + mnist_size, :] = mnist_img_resized_np
         else:
             new_img[:mnist_size, :mnist_size, :] = mnist_img_resized_np
-            new_img[mnist_size:2*mnist_size, :mnist_size, :] = mnist_img_resized_np
+            new_img[mnist_size:2 * mnist_size, :mnist_size, :] = mnist_img_resized_np
 
             new_img[:mnist_size, mnist_size:2 * mnist_size, :] = mnist_img_resized_np
             new_img[mnist_size:2 * mnist_size, mnist_size:2 * mnist_size, :] = mnist_img_resized_np

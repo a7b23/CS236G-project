@@ -1,9 +1,12 @@
 from __future__ import print_function
-from PIL import Image
+
 import os
 import os.path
-import numpy as np
 import sys
+
+import numpy as np
+from PIL import Image
+
 if sys.version_info[0] == 2:
     import cPickle as pickle
 else:
@@ -13,8 +16,6 @@ import torch.utils.data as data
 
 
 class CIFAR10(data.Dataset):
-
-
     base_folder = 'cifar-10-batches-py'
     url = "http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
     filename = "cifar-10-python.tar.gz"
@@ -38,7 +39,6 @@ class CIFAR10(data.Dataset):
         self.transform = transform
         self.target_transform = target_transform
         self.train = train  # training set or test set
-
 
         # now load the picked numpy arrays
         if self.train:
@@ -109,7 +109,6 @@ class CIFAR10(data.Dataset):
             return len(self.train_data)
         else:
             return len(self.test_data)
-
 
 
 class CIFAR100(CIFAR10):

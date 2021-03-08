@@ -1,13 +1,14 @@
 import argparse
-from torchvision import datasets, transforms
-import torch.optim as optim
-from torch.autograd import Variable
-import torchvision.utils as vutils
-from model import *
 import os
 from pathlib import Path
-from clusterone import get_data_path, get_logs_path
 
+import torch.optim as optim
+import torchvision.utils as vutils
+from clusterone import get_data_path, get_logs_path
+from torch.autograd import Variable
+from torchvision import datasets, transforms
+
+from model import *
 
 CLUSTERONE_USERNAME = "gaurav9310"
 
@@ -23,6 +24,7 @@ def boolean_string(s):
         raise ValueError('Not a valid boolean string')
     return s == 'True'
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataroot', required=True, help='path to dataset')
 parser.add_argument('--use_cuda', type=boolean_string, default=True)
@@ -35,6 +37,7 @@ opt = parser.parse_args()
 
 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
 print(opt)
+
 
 def tocuda(x):
     if opt.use_cuda:
@@ -67,19 +70,17 @@ def get_log_odds(raw_marginals):
     return torch.log(marginals / (1 - marginals))
 
 
-
-
 train_loader = torch.utils.data.DataLoader(
     datasets.CIFAR10(root=get_data_path(
-        dataset_name="%s/cifars3"%CLUSTERONE_USERNAME,
+        dataset_name="%s/cifars3" % CLUSTERONE_USERNAME,
         local_root=opt.dataroot,
         local_repo="",
         path=""
     )
-                     , train=True, download=True,
-                  transform=transforms.Compose([
-                      transforms.ToTensor()
-                  ])),
+        , train=True, download=True,
+        transform=transforms.Compose([
+            transforms.ToTensor()
+        ])),
     batch_size=batch_size, shuffle=True)
 
 save_image_dir = get_logs_path(opt.save_image_dir)
@@ -98,9 +99,9 @@ if opt.reuse:
             else:
                 break
 
-    epoch = epoch - 1*opt.save_freq
+    epoch = epoch - 1 * opt.save_freq
 
-    if epoch == -1*opt.save_freq:
+    if epoch == -1 * opt.save_freq:
         netE.apply(weights_init)
         netG.apply(weights_init)
         netD.apply(weights_init)
@@ -119,9 +120,9 @@ else:
     netG.apply(weights_init)
     netD.apply(weights_init)
 
-current_epoch = epoch + 1*opt.save_freq
-optimizerG = optim.Adam([{'params' : netE.parameters()},
-                         {'params' : netG.parameters()}], lr=lr, betas=(0.5,0.999))
+current_epoch = epoch + 1 * opt.save_freq
+optimizerG = optim.Adam([{'params': netE.parameters()},
+                         {'params': netG.parameters()}], lr=lr, betas=(0.5, 0.999))
 optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(0.5, 0.999))
 
 criterion = nn.BCELoss()
@@ -180,7 +181,7 @@ for epoch in range(current_epoch, num_epochs):
             vutils.save_image(d_fake.cpu().data[:16, ],
                               "%s/fake.png" % (save_image_dir)
                               )
-            vutils.save_image(d_real.cpu().data[:16, ], "%s/real.png"% (save_image_dir))
+            vutils.save_image(d_real.cpu().data[:16, ], "%s/real.png" % (save_image_dir))
 
         i += 1
 

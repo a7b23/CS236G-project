@@ -1,10 +1,12 @@
-import os
 import argparse
+import os
+
 import numpy as np
-from torch.autograd import Variable
-from torchvision import datasets, transforms
 import torch.utils.data
 from sklearn.svm import LinearSVC
+from torch.autograd import Variable
+from torchvision import datasets, transforms
+
 from model import *
 
 batch_size = 64
@@ -22,6 +24,7 @@ opt = parser.parse_args()
 
 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
 
+
 def tocuda(x):
     if opt.use_cuda:
         return x.cuda()
@@ -29,8 +32,8 @@ def tocuda(x):
 
 
 def get_random_uniform_batch(data, targets, num_classes=10, samples_per_class=100):
-    random_batch = np.zeros((num_classes*samples_per_class, data.shape[1]))
-    random_targets = np.zeros(num_classes*samples_per_class)
+    random_batch = np.zeros((num_classes * samples_per_class, data.shape[1]))
+    random_targets = np.zeros(num_classes * samples_per_class)
     indices = np.random.permutation(data.shape[0])
     batch_size = 0
     label_counts = np.zeros(num_classes)
@@ -40,7 +43,7 @@ def get_random_uniform_batch(data, targets, num_classes=10, samples_per_class=10
             random_batch[batch_size, :] = data[i, :]
             random_targets[batch_size] = targets[i]
             batch_size += 1
-        if batch_size >= num_classes*samples_per_class:
+        if batch_size >= num_classes * samples_per_class:
             break
 
     return random_batch, random_targets
