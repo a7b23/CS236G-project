@@ -87,3 +87,6 @@ python classify_linear.py --model_type logistic
 
 ```
 
+### Visualization
+
+To visualize the representation learned by the models, 
