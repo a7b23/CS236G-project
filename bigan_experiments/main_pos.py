@@ -157,12 +157,16 @@ for epoch in range(num_epochs):
         if data[0].size()[0] != batch_size:
             continue
 
+        # Real images (x)
         d_real = Variable(tocuda(data[0]))
+        # Augmented Real images (x_aug)
         d_real_aug = Variable(tocuda(data[1]))
 
+        # Fake images (G(z))
         z_fake = Variable(tocuda(torch.randn(batch_size, latent_size, 1, 1)))
         d_fake = netG(z_fake)
 
+        # Sample E(x) with mean and std learned from encoder
         z_real, _, _, _ = netE(d_real)
         z_real = z_real.view(batch_size, -1)
 
@@ -172,6 +176,7 @@ for epoch in range(num_epochs):
 
         output_z = mu + epsilon * sigma
 
+        # Sample E(x_aug) with mean and std learned from encoder
         z_real_aug, _, _, _ = netE(d_real_aug)
         z_real_aug = z_real_aug.view(batch_size, -1)
 
@@ -181,16 +186,21 @@ for epoch in range(num_epochs):
 
         output_z_aug = mu_aug + epsilon_aug * sigma_aug
 
+        # Discriminator output for reals D(E(x), x)
         output_real, _ = netD(d_real + noise1, output_z.view(batch_size, latent_size, 1, 1))
-        output_real_aug, _ = netD(d_real_aug + noise1, output_z_aug.view(batch_size, latent_size, 1, 1))
 
+        # Discriminator output for augmented reals D(E(x_aug), x)
+        output_real_aug, _ = netD(d_real + noise1, output_z_aug.view(batch_size, latent_size, 1, 1))
+
+        # Discriminator output for fakes D(z, G(z))
         output_fake, _ = netD(d_fake + noise2, z_fake)
 
+        # Discriminator loss: -(alpha * log(D(E(x), x)) - (1-alpha) * log(D(E(x_aug), x_aug))) - log(1-D(z, G(z)))
         loss_d = (opt.alpha * criterion(output_real, real_label) + (1.0 - opt.alpha) * criterion(output_real_aug,
                                                                                                  real_label))
-        # loss_d = criterion(output_real, real_label)
-
         loss_d += criterion(output_fake, fake_label)
+
+        # Generator loss: -log(D(z, G(z))) - log(1-D(E(x), x))
         loss_g = criterion(output_fake, real_label) + criterion(output_real, fake_label)
 
         if loss_g.item() < 3.5:

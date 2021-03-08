@@ -164,8 +164,6 @@ if __name__ == "__main__":
                                      transforms.ToTensor()
                                  ])),
             batch_size=batch_size, shuffle=False, num_workers=16)
-
-
     else:
         raise NotImplementedError
 

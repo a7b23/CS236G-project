@@ -17,12 +17,6 @@ parser.add_argument('--dataset', required=True,
                     choices=["cifar10", "svhn", "cifar_mnist_cifar", "cifar_mnist_mnist", "timagenet"])
 parser.add_argument('--model_type', default="logistic", choices=["svm", "logistic", "nn"])
 
-# parser.add_argument('--nvae', default=False, action="store_true",
-#                     help='whether to do for nvae')
-# parser.add_argument('--ddim', default=False, action="store_true",
-#                     help='whether to do for ddim')
-
-
 args = parser.parse_args()
 
 feat_dir = args.feat_dir
@@ -65,15 +59,16 @@ def get_val_data():
     return val_data, labels
 
 
-accs = []
-train_data, train_labels = get_train_data()
-val_data, val_labels = get_val_data()
+if __name__ == '__main__':
+    accs = []
+    train_data, train_labels = get_train_data()
+    val_data, val_labels = get_val_data()
 
-model = get_model(model_type, train_data.shape[1])
+    model = get_model(model_type, train_data.shape[1])
 
-print(train_data.shape, val_data.shape, train_labels.shape, val_labels.shape)
+    print(train_data.shape, val_data.shape, train_labels.shape, val_labels.shape)
 
-model.fit(train_data, train_labels)
-acc = model.score(val_data, val_labels)
+    model.fit(train_data, train_labels)
+    acc = model.score(val_data, val_labels)
 
-print("the acc is ", acc)
+    print("the acc is ", acc)
