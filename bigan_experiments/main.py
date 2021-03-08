@@ -144,6 +144,7 @@ for epoch in range(num_epochs):
         real_label = Variable(tocuda(torch.ones(batch_size)))
         fake_label = Variable(tocuda(torch.zeros(batch_size)))
 
+        # Sample incrementally less noise to add to images for fakes and reals
         noise1 = Variable(tocuda(torch.Tensor(data.size()).normal_(0, 0.1 * (num_epochs - epoch) / num_epochs)))
         noise2 = Variable(tocuda(torch.Tensor(data.size()).normal_(0, 0.1 * (num_epochs - epoch) / num_epochs)))
 
@@ -153,11 +154,14 @@ for epoch in range(num_epochs):
         if data.size()[0] != batch_size:
             continue
 
+        # Real images (x)
         d_real = Variable(tocuda(data))
 
+        # Fake images (G(z))
         z_fake = Variable(tocuda(torch.randn(batch_size, latent_size, 1, 1)))
         d_fake = netG(z_fake)
 
+        # Sample E(x) with mean and std learned from encoder
         z_real, _, _, _ = netE(d_real)
         z_real = z_real.view(batch_size, -1)
 
@@ -167,22 +171,34 @@ for epoch in range(num_epochs):
 
         output_z = mu + epsilon * sigma
 
+        # Discriminator output for reals D(E(x), x)
         output_real, _ = netD(d_real + noise1, output_z.view(batch_size, latent_size, 1, 1))
+        # Discriminator output for fakes D(z, G(z))
         output_fake, _ = netD(d_fake + noise2, z_fake)
 
+        # Discriminator loss: -log(D(E(x), x)) - log(1-D(z, G(z)))
         loss_d = criterion(output_real, real_label) + criterion(output_fake, fake_label)
-        loss_g = criterion(output_fake, real_label) + criterion(output_real, fake_label)
+
+        # Generator loss: -log(D(z, G(z))) - log(1-D(E(x), x))
+        loss_g = criterion(output_fake, real_label) +criterion(output_real, fake_label)
+
+        # Extra discriminator output and loss if enabled
         dix = digx = 0
         if opt.use_image_discriminator:
+            # Discriminator output for reals D(x)
             output_real_image, _ = netDI(d_real + noise1)
+            # Discriminator output for fakes D(G(z))
             output_fake_image, _ = netDI(d_fake + noise2)
 
+            # Discriminator loss: -log(D(x)) - log(1-D(G(z)))
             loss_d += criterion(output_real_image, real_label) + criterion(output_fake_image, fake_label)
+            # Generator loss: -log(D(G(z)))
             loss_g += criterion(output_fake_image, real_label)
 
             dix = output_real_image.mean().item()
             digx = output_fake_image.mean().item()
 
+        # Don't train discriminator if generator loss too high
         if loss_g.item() < 3.5:
             optimizerD.zero_grad()
             loss_d.backward(retain_graph=True)
