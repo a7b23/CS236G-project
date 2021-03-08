@@ -89,4 +89,4 @@ python classify_linear.py --model_type logistic
 
 ### Visualization
 
-To visualize the representation learned by the models, 
+To visualize the representation learned by the models, run the notebook Visualizations.ipynb in notebooks folder

@@ -215,13 +215,13 @@ for epoch in range(num_epochs):
         output_fake, _ = netD(d_fake + noise2, z_fake)
 
         # Discriminator loss:
-        # -((1-alpha-beta) * log(D(E(x), x))
+        # -(1-alpha) * log(D(E(x), x)
         loss_d = (1.0 - opt.alpha - opt.beta) * criterion(output_real, real_label)
         # -alpha * log(D(E(x_aug), x_aug)))
         loss_d += opt.alpha * criterion(output_real_aug, real_label)
         # -beta * log(1-D(E(x_2), x_1)))
         loss_d += opt.beta * criterion(output_real_fake, fake_label)
-        # - log(1-D(z, G(z)))
+        # -(1-beta) * log(1-D(z, G(z)))
         loss_d += criterion(output_fake, fake_label)
 
         # Generator loss: -log(D(z, G(z))) - log(1-D(E(x), x))
