@@ -9,7 +9,7 @@ import argparse
 join=os.path.join
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', required=True, help='cifar10 | svhn')
+parser.add_argument('--dataset', required=True, help='cifar10 | svhn | timagenet | cifar_mnist_cifar | cifar_mnist_mnist')
 parser.add_argument('--feat_dir', default = "feats", help='path to dataset')
 
 args = parser.parse_args()

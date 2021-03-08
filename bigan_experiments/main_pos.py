@@ -3,7 +3,7 @@ from torchvision import datasets, transforms
 import torch.optim as optim
 from torch.autograd import Variable
 import torchvision.utils as vutils
-from model import *
+# from model import *
 import os
 from cifar_dataset_mnist import CIFAR10_MNIST
 import wandb
@@ -36,6 +36,11 @@ cuda_device = opt.cuda_device
 batch_size = opt.batch_size
 num_epochs = opt.num_epochs
 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
+
+if not opt.dataset == "timagenet":
+    from model import *
+else:
+    from model_timagenet import *
 
 wandb.init(project="cs236g-bigan", entity="a7b23", dir='./wandb', config=opt)
 print(opt)
@@ -114,7 +119,7 @@ elif opt.dataset == 'cifar_mnist':
         batch_size=batch_size, shuffle=True, num_workers=8)
 elif opt.dataset == "timagenet":
     train_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(root=opt.dataroot, 
+        datasets.ImageFolder(root="/atlas/u/tsong/data/timagenet/train/", 
                       transform=TwoCropsTransformClean(augs)),
         batch_size=batch_size, shuffle=True, num_workers=8)
 else:

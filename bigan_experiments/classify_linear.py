@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser(description='linear classification')
 
 parser.add_argument('--feat_dir', type=str, default='./feats',
                         help='directory containing features')
-parser.add_argument('--dataset', required=True, choices = ["cifar10", "svhn", "cifar_mnist_cifar", "cifar_mnist_mnist"])
+parser.add_argument('--dataset', required=True, choices = ["cifar10", "svhn", "cifar_mnist_cifar", "cifar_mnist_mnist", "timagenet"])
 parser.add_argument('--model_type', default="logistic", choices = ["svm", "logistic", "nn"])
 
 # parser.add_argument('--nvae', default=False, action="store_true",

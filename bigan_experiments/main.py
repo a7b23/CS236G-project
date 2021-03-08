@@ -8,7 +8,7 @@ from torch.autograd import Variable
 from torchvision import datasets, transforms
 
 from cifar_dataset_mnist import CIFAR10_MNIST
-from model import *
+
 
 lr = 1e-4
 latent_size = 256
@@ -36,6 +36,12 @@ cuda_device = opt.cuda_device
 batch_size = opt.batch_size
 num_epochs = opt.num_epochs
 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
+
+if not opt.dataset == "timagenet":
+    from model import *
+else:
+    from model_timagenet import *
+
 
 # wandb.init(project="cs236g-bigan", entity="a7b23", dir='./wandb', config=opt)
 print(opt)
@@ -101,7 +107,7 @@ elif opt.dataset == 'cifar_mnist':
         batch_size=batch_size, shuffle=True, num_workers=16)
 elif opt.dataset == "timagenet":
     train_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(root=opt.dataroot, 
+        datasets.ImageFolder(root="/atlas/u/tsong/data/timagenet/train/", 
                          transform=transforms.Compose([
                              transforms.ToTensor()
                          ])),
@@ -112,16 +118,21 @@ else:
 netE = tocuda(Encoder(latent_size, True))
 netG = tocuda(Generator(latent_size))
 netD = tocuda(Discriminator(latent_size, 0.2, 1))
-netDI = tocuda(DiscriminatorImage(0.2, 1))
+
 
 netE.apply(weights_init)
 netG.apply(weights_init)
 netD.apply(weights_init)
-netDI.apply(weights_init)
+if opt.use_image_discriminator:
+    netDI = tocuda(DiscriminatorImage(0.2, 1))
+    netDI.apply(weights_init)
 
 optimizerG = optim.Adam([{'params': netE.parameters()},
                          {'params': netG.parameters()}], lr=lr, betas=(0.5, 0.999))
-optimizerD = optim.Adam(list(netD.parameters()) + list(netDI.parameters()), lr=lr, betas=(0.5, 0.999))
+if opt.use_image_discriminator:
+    optimizerD = optim.Adam(list(netD.parameters()) + list(netDI.parameters()), lr=lr, betas=(0.5, 0.999))
+else:
+    optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(0.5, 0.999))
 
 criterion = nn.BCELoss()
 

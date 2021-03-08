@@ -27,7 +27,8 @@ parser.add_argument('--use_cuda', type=boolean_string, default=True)
 parser.add_argument('--cuda_device', type=str, default="0")
 parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--num_epochs', type=int, default=100)
-parser.add_argument('--alpha', type=float, default=0.5)
+parser.add_argument('--alpha', type=float, default=0.25)
+parser.add_argument('--beta', type=float, default=0.25)
 parser.add_argument('--save_model_dir', required=True)
 parser.add_argument('--save_image_dir', required=True)
 
@@ -41,7 +42,7 @@ if not opt.dataset == "timagenet":
     from model import *
 else:
     from model_timagenet import *
-
+    
 wandb.init(project="cs236g-bigan", entity="a7b23", dir='./wandb', config=opt)
 print(opt)
 
@@ -50,6 +51,7 @@ if not os.path.exists(opt.save_image_dir):
 
 if not os.path.exists(opt.save_model_dir):
     os.makedirs(opt.save_model_dir)
+
 
 def tocuda(x):
     if opt.use_cuda:
@@ -81,6 +83,23 @@ def get_log_odds(raw_marginals):
     marginals = torch.clamp(raw_marginals.mean(dim=0), 1e-7, 1 - 1e-7)
     return torch.log(marginals / (1 - marginals))
 
+class TwoCropsTransformClean:
+    """Take two random crops of one image as the query and key."""
+
+    def __init__(self, base_transform):
+        self.base_transform = base_transform
+
+    def __call__(self, x):
+        k = self.base_transform(x)
+        q_clean = transforms.ToTensor()(x)
+        return [q_clean, k]
+
+augs = transforms.Compose([transforms.RandomApply([
+                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
+            ], p=0.8),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor()])
 
 if opt.dataset == 'svhn':
     train_loader = torch.utils.data.DataLoader(
@@ -92,23 +111,17 @@ if opt.dataset == 'svhn':
 elif opt.dataset == 'cifar10':
     train_loader = torch.utils.data.DataLoader(
         datasets.CIFAR10(root=opt.dataroot, train=True, download=True,
-                      transform=transforms.Compose([
-                          transforms.ToTensor()
-                      ])),
+                      transform=TwoCropsTransformClean(augs)),       
         batch_size=batch_size, shuffle=True, num_workers=8)
 elif opt.dataset == 'cifar_mnist':
     train_loader = torch.utils.data.DataLoader(
         CIFAR10_MNIST(root=opt.dataroot, aug_type = 1, train=True, download=False,
-                      transform=transforms.Compose([
-                          transforms.ToTensor()
-                      ])),
+                      transform=TwoCropsTransformClean(augs)),
         batch_size=batch_size, shuffle=True, num_workers=8)
 elif opt.dataset == "timagenet":
     train_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(root="/atlas/u/tsong/data/timagenet/train/",
-                      transform=transforms.Compose([
-                          transforms.ToTensor()
-                      ])),
+        datasets.ImageFolder(root=opt.dataroot, 
+                      transform=TwoCropsTransformClean(augs)),
         batch_size=batch_size, shuffle=True, num_workers=8)
 else:
     raise NotImplementedError
@@ -134,25 +147,29 @@ def get_perm(l) :
     return perm
 
 
+
 for epoch in range(num_epochs):
 
     i = 0
+    print(len(train_loader))
     for (data, target) in train_loader:
         step = epoch * len(train_loader) + i
         real_label = Variable(tocuda(torch.ones(batch_size)))
         fake_label = Variable(tocuda(torch.zeros(batch_size)))
 
-        noise1 = Variable(tocuda(torch.Tensor(data.size()).normal_(0, 0.1 * (num_epochs - epoch) / num_epochs)))
-        noise2 = Variable(tocuda(torch.Tensor(data.size()).normal_(0, 0.1 * (num_epochs - epoch) / num_epochs)))
-        noise3 = Variable(tocuda(torch.Tensor(data.size()).normal_(0, 0.1 * (num_epochs - epoch) / num_epochs)))
+        noise1 = Variable(tocuda(torch.Tensor(data[0].size()).normal_(0, 0.1 * (num_epochs - epoch) / num_epochs)))
+        noise2 = Variable(tocuda(torch.Tensor(data[0].size()).normal_(0, 0.1 * (num_epochs - epoch) / num_epochs)))
+        noise3 = Variable(tocuda(torch.Tensor(data[0].size()).normal_(0, 0.1 * (num_epochs - epoch) / num_epochs)))
 
         if epoch == 0 and i == 0:
-            netG.output_bias.data = get_log_odds(tocuda(data))
+            netG.output_bias.data = get_log_odds(tocuda(data[0]))
 
-        if data.size()[0] != batch_size:
+        # print(data[0].size(), batch_size)
+        if data[0].size()[0] != batch_size:
             continue
 
-        d_real = Variable(tocuda(data))
+        d_real = Variable(tocuda(data[0]))
+        d_real_aug = Variable(tocuda(data[1]))
 
         z_fake = Variable(tocuda(torch.randn(batch_size, latent_size, 1, 1)))
         d_fake = netG(z_fake)
@@ -166,19 +183,32 @@ for epoch in range(num_epochs):
 
         output_z = mu + epsilon * sigma
 
+        z_real_aug, _, _, _ = netE(d_real_aug)
+        z_real_aug = z_real_aug.view(batch_size, -1)
+
+        mu_aug, log_sigma_aug = z_real_aug[:, :latent_size], z_real_aug[:, latent_size:]
+        sigma_aug = torch.exp(log_sigma_aug)
+        epsilon_aug = Variable(tocuda(torch.randn(batch_size, latent_size)))
+
+        output_z_aug = mu_aug + epsilon_aug * sigma_aug
+
         output_real, _ = netD(d_real + noise1, output_z.view(batch_size, latent_size, 1, 1))
+        output_real_aug, _ = netD(d_real_aug + noise1, output_z_aug.view(batch_size, latent_size, 1, 1))
+        
         shuff_indices = get_perm(d_real.size(0))
         d_real_fake = d_real.clone()[shuff_indices]
 
         output_real_fake, _ = netD(d_real_fake + noise3, output_z.view(batch_size, latent_size, 1, 1))
-        
+
+
         output_fake, _ = netD(d_fake + noise2, z_fake)
 
-        loss_d = criterion(output_real, real_label)
-        if opt.alpha <= 1.0:
-            loss_d += (opt.alpha*criterion(output_fake, fake_label) + (1.0 - opt.alpha)*criterion(output_real_fake, fake_label))
-        else:
-            loss_d += (criterion(output_fake, fake_label) + (opt.alpha - 1.0)*criterion(output_real_fake, fake_label))
+        loss_d = (1.0 - opt.alpha - opt.beta)*criterion(output_real, real_label) 
+        loss_d += opt.alpha*criterion(output_real_aug, real_label)
+        loss_d += opt.beta*criterion(output_real_fake, fake_label)
+        # loss_d = criterion(output_real, real_label)
+
+        loss_d += criterion(output_fake, fake_label)
         loss_g = criterion(output_fake, real_label) + criterion(output_real, fake_label)
 
         if loss_g.item() < 3.5:
@@ -202,9 +232,8 @@ for epoch in range(num_epochs):
             vutils.save_image(d_real.cpu().data[:16, ], './%s/real.png'% (opt.save_image_dir))
             wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]],
                        'reals': [wandb.Image(i) for i in d_real.cpu().data[:16, ]]}, step=step)
-
         i += 1
-
+        # print(d_fake.size())
     if epoch % 25 == 0 or epoch == num_epochs - 1:
         torch.save(netG.state_dict(), './%s/netG_epoch_%d.pth' % (opt.save_model_dir, epoch))
         torch.save(netE.state_dict(), './%s/netE_epoch_%d.pth' % (opt.save_model_dir, epoch))
@@ -212,5 +241,6 @@ for epoch in range(num_epochs):
 
         vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake_%d.png' % (opt.save_image_dir, epoch))
         wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]]}, step=step)
+
 
 

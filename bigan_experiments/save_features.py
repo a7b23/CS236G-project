@@ -5,7 +5,6 @@ from torch.autograd import Variable
 from torchvision import datasets, transforms
 import torch.utils.data
 from sklearn.svm import LinearSVC
-from model import *
 from cifar_dataset_mnist_eval import CIFAR10_MNIST
 join=os.path.join
 
@@ -14,8 +13,8 @@ latent_size = 256
 cuda_device = "0"
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', required=True, help='cifar10 | svhn | cifar_mnist_cifar | cifar_mnist_mnist',
-                      choices = ['cifar10', 'svhn', 'cifar_mnist_mnist', 'cifar_mnist_cifar'])
+parser.add_argument('--dataset', required=True, help='cifar10 | svhn | cifar_mnist_cifar | cifar_mnist_mnist | timagenet',
+                      choices = ['cifar10', 'svhn', 'cifar_mnist_mnist', 'cifar_mnist_cifar', 'timagenet'])
 parser.add_argument('--feat_dir', required=True, help='features directory')
 
 parser.add_argument('--dataroot', default = "/atlas/u/a7b23/data", help='path to dataset')
@@ -25,6 +24,11 @@ parser.add_argument('--model_path', required=True)
 opt = parser.parse_args()
 
 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
+
+if not opt.dataset == "timagenet":
+    from model import *
+else:
+    from model_timagenet import *
 
 def tocuda(x):
     if opt.use_cuda:
@@ -60,10 +64,12 @@ def get_embeddings(loader, netE, fname):
         temp = temp.view(temp.size(0), -1)
         all_embeddings.extend(temp.cpu().data.numpy())
         all_targets.extend(target.cpu().data.numpy())
-        print(idx, len(train_loader))
+        print(idx, len(loader))
+        if len(all_embeddings) >= 100000:
+          break
 
-    all_embeddings = np.array(all_embeddings)
-    all_targets = np.array(all_targets)
+    all_embeddings = np.array(all_embeddings)[:100000]
+    all_targets = np.array(all_targets)[:100000]
 
     print(all_embeddings.shape, all_targets.shape)
 
@@ -100,7 +106,7 @@ if __name__ == "__main__":
                              transform=transforms.Compose([
                                  transforms.ToTensor()
                              ])),
-            batch_size=batch_size, shuffle=False)
+            batch_size=batch_size, shuffle=True)
 
         test_loader = torch.utils.data.DataLoader(
             datasets.CIFAR10(root=opt.dataroot, train=False, download=True,
@@ -138,6 +144,22 @@ if __name__ == "__main__":
                           transforms.ToTensor()
                       ])),
         batch_size=batch_size, shuffle=False)
+
+    elif opt.dataset == "timagenet":
+        train_loader = torch.utils.data.DataLoader(
+        datasets.ImageFolder(root="/atlas/u/tsong/data/timagenet/train/", 
+                         transform=transforms.Compose([
+                             transforms.ToTensor()
+                         ])),
+        batch_size=batch_size, shuffle=False, num_workers=16)
+
+        test_loader = torch.utils.data.DataLoader(
+        datasets.ImageFolder(root="/atlas/u/a7b23/data/tiny-imagenet-200/val", 
+                         transform=transforms.Compose([
+                             transforms.ToTensor()
+                         ])),
+        batch_size=batch_size, shuffle=False, num_workers=16)
+
 
     else:
         raise NotImplementedError
