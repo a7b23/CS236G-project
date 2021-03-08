@@ -9,9 +9,9 @@ from torchvision import datasets, transforms
 
 from cifar_dataset_mnist import CIFAR10_MNIST
 
-
 lr = 1e-4
 latent_size = 256
+
 
 def boolean_string(s):
     if s not in {'False', 'True'}:
@@ -21,7 +21,7 @@ def boolean_string(s):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', required=True, help='cifar10 | svhn | cifar_mnist',
-                                choices = ["cifar10", "svhn", "cifar_mnist", "timagenet"])
+                    choices=["cifar10", "svhn", "cifar_mnist", "timagenet"])
 parser.add_argument('--dataroot', required=True, help='path to dataset')
 parser.add_argument('--use_cuda', type=boolean_string, default=True)
 parser.add_argument('--cuda_device', type=str, default="0")
@@ -42,8 +42,9 @@ if not opt.dataset == "timagenet":
 else:
     from model_timagenet import *
 
-
-# wandb.init(project="cs236g-bigan", entity="a7b23", dir='./wandb', config=opt)
+wandb.init(project="cs236g-bigan", entity="a7b23", dir='./wandb', config=opt)
+opt.save_model_dir = os.path.join(opt.save_model_dir, wandb.run.id)
+opt.save_image_dir = os.path.join(opt.save_image_dir, wandb.run.id)
 print(opt)
 
 if not os.path.exists(opt.save_image_dir):
@@ -107,10 +108,10 @@ elif opt.dataset == 'cifar_mnist':
         batch_size=batch_size, shuffle=True, num_workers=16)
 elif opt.dataset == "timagenet":
     train_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(root="/atlas/u/tsong/data/timagenet/train/", 
-                         transform=transforms.Compose([
-                             transforms.ToTensor()
-                         ])),
+        datasets.ImageFolder(root="/atlas/u/tsong/data/timagenet/train/",
+                             transform=transforms.Compose([
+                                 transforms.ToTensor()
+                             ])),
         batch_size=batch_size, shuffle=True, num_workers=16)
 else:
     raise NotImplementedError
@@ -118,7 +119,6 @@ else:
 netE = tocuda(Encoder(latent_size, True))
 netG = tocuda(Generator(latent_size))
 netD = tocuda(Discriminator(latent_size, 0.2, 1))
-
 
 netE.apply(weights_init)
 netG.apply(weights_init)
@@ -196,22 +196,22 @@ for epoch in range(num_epochs):
             print("Epoch :", epoch, "Iter :", i, "D Loss :", loss_d.item(), "G loss :", loss_g.item(),
                   "D(x) :", output_real.mean().item(), "D(G(x)) :", output_fake.mean().item(),
                   "DI(x) :", dix, "DI(G(x)) :", digx)
-            # wandb.log({"Epoch": epoch, "Iter": i, "D Loss": loss_d.item(), "G loss": loss_g.item(),
-            #            "D(x)": output_real.mean().item(), "D(G(x))": output_fake.mean().item(),
-            #            "DI(x)": dix, "DI(G(x))": digx},
-            #           step=step)
+            wandb.log({"Epoch": epoch, "Iter": i, "D Loss": loss_d.item(), "G loss": loss_g.item(),
+                       "D(x)": output_real.mean().item(), "D(G(x))": output_fake.mean().item(),
+                       "DI(x)": dix, "DI(G(x))": digx},
+                      step=step)
 
-        if i % 100 == 0:
-            vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake.png' % (opt.save_image_dir))
-            vutils.save_image(d_real.cpu().data[:16, ], './%s/real.png' % (opt.save_image_dir))
-            # wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]],
-            #            'reals': [wandb.Image(i) for i in d_real.cpu().data[:16, ]]}, step=step)
-        i += 1
+    if i % 100 == 0:
+        vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake.png' % (opt.save_image_dir))
+        vutils.save_image(d_real.cpu().data[:16, ], './%s/real.png' % (opt.save_image_dir))
+        wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]],
+                   'reals': [wandb.Image(i) for i in d_real.cpu().data[:16, ]]}, step=step)
+    i += 1
 
-    if epoch % 25 == 0 or epoch == num_epochs - 1:
-        torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.save_model_dir, epoch))
-        torch.save(netE.state_dict(), '%s/netE_epoch_%d.pth' % (opt.save_model_dir, epoch))
-        torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.save_model_dir, epoch))
+if epoch % 25 == 0 or epoch == num_epochs - 1:
+    torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.save_model_dir, epoch))
+    torch.save(netE.state_dict(), '%s/netE_epoch_%d.pth' % (opt.save_model_dir, epoch))
+    torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.save_model_dir, epoch))
 
-        vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake_%d.png' % (opt.save_image_dir, epoch))
-        # wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]]}, step=step)
+    vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake_%d.png' % (opt.save_image_dir, epoch))
+    wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]]}, step=step)

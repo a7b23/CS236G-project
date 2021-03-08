@@ -25,6 +25,7 @@ class CIFAR10_MNIST(data.Dataset):
         self.transform = transform
         self.target_transform = target_transform
         self.aug_type = aug_type
+        self.cifar_mnist = np.random.randint(0, len(self.mnist), len(self.cifar10))
 
     def __len__(self):
         return len(self.cifar10)
@@ -32,7 +33,7 @@ class CIFAR10_MNIST(data.Dataset):
     def __getitem__(self, index):
         img, target = self.tensor_dataset[index]
         mnist_size = 8
-        if self.aug_type == 2:
+        if self.aug_type in [2, 3]:
             mnist_size = 16
 
         img = transforms.ToPILImage()(img)
@@ -56,8 +57,15 @@ class CIFAR10_MNIST(data.Dataset):
             new_img[-10:-10 + mnist_size, -10:-10 + mnist_size, :] = mnist_img_resized_np
 
             new_img[12:12 + mnist_size, 12:12 + mnist_size, :] = mnist_img_resized_np
-        else:
+        elif self.aug_type == 2:
             new_img[8:8 + mnist_size, 8:8 + mnist_size, :] = mnist_img_resized_np
+        else:
+            new_img[:mnist_size, :mnist_size, :] = mnist_img_resized_np
+            new_img[mnist_size:2*mnist_size, :mnist_size, :] = mnist_img_resized_np
+
+            new_img[:mnist_size, mnist_size:2 * mnist_size, :] = mnist_img_resized_np
+            new_img[mnist_size:2 * mnist_size, mnist_size:2 * mnist_size, :] = mnist_img_resized_np
+
         new_img = Image.fromarray(new_img.astype(np.uint8))
 
         img_np = np.stack([img_np, new_img], axis=0)

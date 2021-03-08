@@ -11,7 +11,7 @@ class CIFAR10_MNIST(data.Dataset):
         super(data.Dataset).__init__()
         print("present here")
         self.cifar10 = datasets.CIFAR10(root, train, download=download)
-        self.mnist = datasets.MNIST("/atlas/u/a7b23/data", train=train, download=False)
+        self.mnist = datasets.MNIST(root, train=train, download=download)
         if indices:
             indices_val = np.load(indices)
             self.cifar10.data = self.cifar10.data[indices_val]
