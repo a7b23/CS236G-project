@@ -6,6 +6,7 @@ import numpy as np
 import torch.utils.data
 from torch.autograd import Variable
 from torchvision import datasets, transforms
+from tqdm import tqdm
 
 join = os.path.join
 
@@ -42,13 +43,12 @@ def get_embeddings(loader, netE, fname):
     all_embeddings = []
     all_targets = []
 
-    for idx, (data, target) in enumerate(loader):
+    for idx, (data, target) in tqdm(enumerate(loader), total=min(100000, len(loader)//batch_size)):
         temp, h1, h2, h3 = netE.forward(Variable(tocuda(data)))
 
         temp = temp.view(temp.size(0), -1)
         all_embeddings.extend(temp.cpu().data.numpy())
         all_targets.extend(target.cpu().data.numpy())
-        print(idx, len(loader))
         if len(all_embeddings) >= 100000:
             break
 
@@ -66,22 +66,22 @@ def get_embeddings(loader, netE, fname):
 
 def get_data_loaders(args):
     root = val_root = args.dataroot
-    if opt.dataset == 'svhn':
+    if args.dataset == 'svhn':
         train_dataset_cls = partial(datasets.SVHN, split='extra')
         val_dataset_cls = partial(datasets.SVHN, split='train')
-    elif opt.dataset == 'cifar10':
+    elif args.dataset == 'cifar10':
         train_dataset_cls = partial(datasets.CIFAR10, train=True)
         val_dataset_cls = partial(datasets.CIFAR10, train=False)
 
-    elif opt.dataset == "cifar_mnist_cifar":
+    elif args.dataset == "cifar_mnist_cifar":
         train_dataset_cls = partial(datasets.CIFAR10, aug_type=1, dataset="cifar", train=True)
         val_dataset_cls = partial(datasets.CIFAR10, aug_type=1, dataset="cifar", train=False)
 
-    elif opt.dataset == "cifar_mnist_mnist":
+    elif args.dataset == "cifar_mnist_mnist":
         train_dataset_cls = partial(datasets.CIFAR10, aug_type=1, dataset="mnist", train=True)
         val_dataset_cls = partial(datasets.CIFAR10, aug_type=1, dataset="mnist", train=False)
 
-    elif opt.dataset == "timagenet":
+    elif args.dataset == "timagenet":
         train_dataset_cls = datasets.ImageFolder
         val_dataset_cls = datasets.ImageFolder
         root = "/atlas/u/tsong/data/timagenet/train/"
@@ -93,14 +93,14 @@ def get_data_loaders(args):
                           transform=transforms.Compose([
                               transforms.ToTensor()
                           ])),
-        batch_size=batch_size, shuffle=False, num_workers=16)
+        batch_size=batch_size, shuffle=False, num_workers=0)
 
     test_loader = torch.utils.data.DataLoader(
         val_dataset_cls(root=val_root, download=True,
                         transform=transforms.Compose([
                             transforms.ToTensor()
                         ])),
-        batch_size=batch_size, shuffle=False, num_workers=16)
+        batch_size=batch_size, shuffle=False, num_workers=0)
     return train_loader, test_loader
 
 

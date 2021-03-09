@@ -15,7 +15,7 @@ def get_model(model_name, inp_size):
         clf = svm.LinearSVC(random_state=0)
 
     elif model_name == "logistic":
-        clf = LogisticRegression(random_state=0)
+        clf = LogisticRegression(random_state=0, max_iter=200)
 
     elif model_name == "nn":
         clf = Net(inp_size=inp_size, out_size=10)

@@ -1,8 +1,9 @@
 import argparse
 import os
 
-from bigan_experiments.classify_linear import eval_linear
-from bigan_experiments.nearest_neighbour_acc_1 import eval_knn
+import save_features
+from classify_linear import eval_linear
+from nearest_neighbour_acc_1 import eval_knn
 from save_features import get_data_loaders, get_embeddings
 
 join = os.path.join
@@ -17,6 +18,8 @@ def tocuda(x):
         return x.cuda()
     return x
 
+
+save_features.tocuda = tocuda
 
 if __name__ == "__main__":
 
@@ -45,13 +48,12 @@ if __name__ == "__main__":
 
     print("Model restored")
 
-    if not os.path.exists(opt.feat_dir):
-        os.makedirs(opt.feat_dir)
-
     train_loader, test_loader = get_data_loaders(opt)
 
     train_features, train_labels = get_embeddings(train_loader, netE, None)
     test_features, test_labels = get_embeddings(test_loader, netE, None)
+
+    print("features inferred")
 
     knn_acc = eval_knn(train_features, train_labels, test_features, test_labels)
 
