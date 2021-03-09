@@ -7,28 +7,21 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 join = os.path.join
 
-if __name__ == '__main__':
 
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', required=True,
-                        help='cifar10 | svhn | timagenet | cifar_mnist_cifar | cifar_mnist_mnist')
-    parser.add_argument('--feat_dir', default="feats", help='path to dataset')
-
-    args = parser.parse_args()
-
+def load(args):
     dataset = args.dataset
     feat_dir = args.feat_dir
     labels_dir = args.feat_dir
-
     # Load train and test features
     train_features = np.load(join(feat_dir, dataset + "_train_feats.npy"))
     val_features = np.load(join(feat_dir, dataset + "_test_feats.npy"))
 
-
     train_labels = np.load(join(labels_dir, dataset + "_train_labels.npy"))
     val_labels = np.load(join(labels_dir, dataset + "_test_labels.npy"))
+    return train_features, train_labels, val_features, val_labels
 
+
+def eval_knn(train_features, train_labels, val_features, val_labels):
     train_features = np.reshape(train_features, [len(train_features), -1])
     val_features = np.reshape(val_features, [len(val_features), -1])
 
@@ -52,10 +45,25 @@ if __name__ == '__main__':
     # Generate classification accuracy for different values of k from 1 to 100
     top_k = np.arange(0, 101, 5)
     top_k[0] = 1
+    result = {}
     for k in top_k:
         out = stats.mode(pred_labels[:, :k], axis=1).mode
 
         labels = np.array([val[0] for val in out])
 
         # print(pred_labels.shape, val_labels.shape)
-        print(k, np.mean(np.equal(labels, val_labels)))
+        acc = np.mean(np.equal(labels, val_labels))
+        print(k, acc)
+        result[k] = acc
+    return sorted(result.items(), key=lambda x: x[1], reverse=True)[0][1]
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', required=True,
+                        help='cifar10 | svhn | timagenet | cifar_mnist_cifar | cifar_mnist_mnist')
+    parser.add_argument('--feat_dir', default="feats", help='path to dataset')
+
+    args = parser.parse_args()
+
+    eval_knn(*load(args))

@@ -39,6 +39,9 @@ opt = parser.parse_args()
 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
 print(opt)
 
+opt.save_image_dir = os.path.expanduser(opt.save_image_dir)
+opt.save_model_dir = os.path.expanduser(opt.save_model_dir)
+
 if not os.path.exists(opt.save_image_dir):
     os.makedirs(opt.save_image_dir)
 
@@ -212,19 +215,19 @@ for epoch in range(num_epochs):
         loss_g.backward()
         optimizerG.step()
 
-        if i % 1 == 0:
+        if i % 100 == 0:
             print("Epoch :", epoch, "Iter :", i, "D Loss :", loss_d.item(), "G loss :", loss_g.item(),
                   "D(x) :", output_real.mean().item(), "D(G(x)) :", output_fake.mean().item())
 
-        if i % 50 == 0:
-            vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake.png' % (opt.save_image_dir))
-            vutils.save_image(d_real.cpu().data[:16, ], './%s/real.png' % (opt.save_image_dir))
+        if i % 500 == 0:
+            vutils.save_image(d_fake.cpu().data[:16, ], '%s/fake.png' % (opt.save_image_dir))
+            vutils.save_image(d_real.cpu().data[:16, ], '%s/real.png' % (opt.save_image_dir))
 
         i += 1
 
     if epoch % 25 == 0 or epoch == num_epochs - 1:
-        torch.save(netG.state_dict(), './%s/netG_epoch_%d.pth' % (opt.save_model_dir, epoch))
-        torch.save(netE.state_dict(), './%s/netE_epoch_%d.pth' % (opt.save_model_dir, epoch))
-        torch.save(netD.state_dict(), './%s/netD_epoch_%d.pth' % (opt.save_model_dir, epoch))
+        torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.save_model_dir, epoch))
+        torch.save(netE.state_dict(), '%s/netE_epoch_%d.pth' % (opt.save_model_dir, epoch))
+        torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.save_model_dir, epoch))
 
-        vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake_%d.png' % (opt.save_image_dir, epoch))
+        vutils.save_image(d_fake.cpu().data[:16, ], '%s/fake_%d.png' % (opt.save_image_dir, epoch))

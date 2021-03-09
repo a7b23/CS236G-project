@@ -1,37 +1,17 @@
 import argparse
 import os
+from functools import partial
 
 import numpy as np
 import torch.utils.data
 from torch.autograd import Variable
 from torchvision import datasets, transforms
 
-from cifar_dataset_mnist_eval import CIFAR10_MNIST
-
 join = os.path.join
 
 batch_size = 64
 latent_size = 256
 cuda_device = "0"
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', required=True,
-                    help='cifar10 | svhn | cifar_mnist_cifar | cifar_mnist_mnist | timagenet',
-                    choices=['cifar10', 'svhn', 'cifar_mnist_mnist', 'cifar_mnist_cifar', 'timagenet'])
-parser.add_argument('--feat_dir', required=True, help='features directory')
-
-parser.add_argument('--dataroot', default="/atlas/u/a7b23/data", help='path to dataset')
-parser.add_argument('--use_cuda', type=bool, default=True)
-parser.add_argument('--model_path', required=True)
-
-opt = parser.parse_args()
-
-os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
-
-if not opt.dataset == "timagenet":
-    from model import *
-else:
-    from model_timagenet import *
 
 
 def tocuda(x):
@@ -77,11 +57,73 @@ def get_embeddings(loader, netE, fname):
 
     print(all_embeddings.shape, all_targets.shape)
 
-    np.save(fname, all_embeddings)
-    np.save(fname.replace("feats.npy", "labels.npy"), all_targets)
+    if fname is not None:
+        np.save(fname, all_embeddings)
+        np.save(fname.replace("feats.npy", "labels.npy"), all_targets)
+
+    return all_embeddings, all_targets
+
+
+def get_data_loaders(args):
+    root = val_root = args.dataroot
+    if opt.dataset == 'svhn':
+        train_dataset_cls = partial(datasets.SVHN, split='extra')
+        val_dataset_cls = partial(datasets.SVHN, split='train')
+    elif opt.dataset == 'cifar10':
+        train_dataset_cls = partial(datasets.CIFAR10, train=True)
+        val_dataset_cls = partial(datasets.CIFAR10, train=False)
+
+    elif opt.dataset == "cifar_mnist_cifar":
+        train_dataset_cls = partial(datasets.CIFAR10, aug_type=1, dataset="cifar", train=True)
+        val_dataset_cls = partial(datasets.CIFAR10, aug_type=1, dataset="cifar", train=False)
+
+    elif opt.dataset == "cifar_mnist_mnist":
+        train_dataset_cls = partial(datasets.CIFAR10, aug_type=1, dataset="mnist", train=True)
+        val_dataset_cls = partial(datasets.CIFAR10, aug_type=1, dataset="mnist", train=False)
+
+    elif opt.dataset == "timagenet":
+        train_dataset_cls = datasets.ImageFolder
+        val_dataset_cls = datasets.ImageFolder
+        root = "/atlas/u/tsong/data/timagenet/train/"
+        val_root = "/atlas/u/a7b23/data/tiny-imagenet-200/val"
+    else:
+        raise NotImplementedError
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset_cls(root=root, download=True,
+                          transform=transforms.Compose([
+                              transforms.ToTensor()
+                          ])),
+        batch_size=batch_size, shuffle=False, num_workers=16)
+
+    test_loader = torch.utils.data.DataLoader(
+        val_dataset_cls(root=val_root, download=True,
+                        transform=transforms.Compose([
+                            transforms.ToTensor()
+                        ])),
+        batch_size=batch_size, shuffle=False, num_workers=16)
+    return train_loader, test_loader
 
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', required=True,
+                        help='cifar10 | svhn | cifar_mnist_cifar | cifar_mnist_mnist | timagenet',
+                        choices=['cifar10', 'svhn', 'cifar_mnist_mnist', 'cifar_mnist_cifar', 'timagenet'])
+    parser.add_argument('--feat_dir', required=True, help='features directory')
+
+    parser.add_argument('--dataroot', default="/atlas/u/a7b23/data", help='path to dataset')
+    parser.add_argument('--use_cuda', type=bool, default=True)
+    parser.add_argument('--model_path', required=True)
+
+    opt = parser.parse_args()
+
+    os.environ["CUDA_VISIBLE_DEVICES"] = cuda_device
+
+    if not opt.dataset == "timagenet":
+        from model import *
+    else:
+        from model_timagenet import *
 
     encoder_state_dict = torch.load(opt.model_path)
     netE = Encoder(latent_size, True)
@@ -90,85 +132,10 @@ if __name__ == "__main__":
 
     print("Model restored")
 
-    if opt.dataset == 'svhn':
-        train_loader = torch.utils.data.DataLoader(
-            datasets.SVHN(root=opt.dataroot, split='extra', download=True,
-                          transform=transforms.Compose([
-                              transforms.ToTensor()
-                          ])),
-            batch_size=batch_size, shuffle=False)
-
-        test_loader = torch.utils.data.DataLoader(
-            datasets.SVHN(root=opt.dataroot, split='train', download=True,
-                          transform=transforms.Compose([
-                              transforms.ToTensor()
-                          ])),
-            batch_size=batch_size, shuffle=False)
-
-    elif opt.dataset == 'cifar10':
-        train_loader = torch.utils.data.DataLoader(
-            datasets.CIFAR10(root=opt.dataroot, train=True, download=True,
-                             transform=transforms.Compose([
-                                 transforms.ToTensor()
-                             ])),
-            batch_size=batch_size, shuffle=True)
-
-        test_loader = torch.utils.data.DataLoader(
-            datasets.CIFAR10(root=opt.dataroot, train=False, download=True,
-                             transform=transforms.Compose([
-                                 transforms.ToTensor()
-                             ])),
-            batch_size=batch_size, shuffle=False)
-
-    elif opt.dataset == "cifar_mnist_cifar":
-        train_loader = torch.utils.data.DataLoader(
-            CIFAR10_MNIST(root=opt.dataroot, aug_type=1, train=True, download=False, dataset="cifar",
-                          transform=transforms.Compose([
-                              transforms.ToTensor()
-                          ])),
-            batch_size=batch_size, shuffle=False)
-
-        test_loader = torch.utils.data.DataLoader(
-            CIFAR10_MNIST(root=opt.dataroot, aug_type=1, train=False, download=False, dataset="cifar",
-                          transform=transforms.Compose([
-                              transforms.ToTensor()
-                          ])),
-            batch_size=batch_size, shuffle=False)
-
-    elif opt.dataset == "cifar_mnist_mnist":
-        train_loader = torch.utils.data.DataLoader(
-            CIFAR10_MNIST(root=opt.dataroot, aug_type=1, train=True, download=False, dataset="mnist",
-                          transform=transforms.Compose([
-                              transforms.ToTensor()
-                          ])),
-            batch_size=batch_size, shuffle=False)
-
-        test_loader = torch.utils.data.DataLoader(
-            CIFAR10_MNIST(root=opt.dataroot, aug_type=1, train=False, download=False, dataset="mnist",
-                          transform=transforms.Compose([
-                              transforms.ToTensor()
-                          ])),
-            batch_size=batch_size, shuffle=False)
-
-    elif opt.dataset == "timagenet":
-        train_loader = torch.utils.data.DataLoader(
-            datasets.ImageFolder(root="/atlas/u/tsong/data/timagenet/train/",
-                                 transform=transforms.Compose([
-                                     transforms.ToTensor()
-                                 ])),
-            batch_size=batch_size, shuffle=False, num_workers=16)
-
-        test_loader = torch.utils.data.DataLoader(
-            datasets.ImageFolder(root="/atlas/u/a7b23/data/tiny-imagenet-200/val",
-                                 transform=transforms.Compose([
-                                     transforms.ToTensor()
-                                 ])),
-            batch_size=batch_size, shuffle=False, num_workers=16)
-    else:
-        raise NotImplementedError
-
     if not os.path.exists(opt.feat_dir):
         os.makedirs(opt.feat_dir)
+
+    train_loader, test_loader = get_data_loaders(opt)
 
     get_embeddings(train_loader, netE, join(opt.feat_dir, opt.dataset + "_train_feats.npy"))
     get_embeddings(test_loader, netE, join(opt.feat_dir, opt.dataset + "_test_feats.npy"))

@@ -9,20 +9,6 @@ from nn_model import Net
 
 join = os.path.join
 
-parser = argparse.ArgumentParser(description='linear classification')
-
-parser.add_argument('--feat_dir', type=str, default='./feats',
-                    help='directory containing features')
-parser.add_argument('--dataset', required=True,
-                    choices=["cifar10", "svhn", "cifar_mnist_cifar", "cifar_mnist_mnist", "timagenet"])
-parser.add_argument('--model_type', default="logistic", choices=["svm", "logistic", "nn"])
-
-args = parser.parse_args()
-
-feat_dir = args.feat_dir
-model_type = args.model_type
-dataset = args.dataset
-
 
 def get_model(model_name, inp_size):
     if model_name == "svm":
@@ -37,33 +23,18 @@ def get_model(model_name, inp_size):
     return clf
 
 
-def get_train_data():
-    train_data = np.load(join(feat_dir, dataset + "_train_feats.npy"))
-    train_data = np.reshape(train_data, [len(train_data), -1])
+def get_data(split='train'):
+    data = np.load(join(feat_dir, dataset + f"_{split}_feats.npy"))
+    data = np.reshape(data, [len(data), -1])
 
-    labels = np.load(join(feat_dir, dataset + "_train_labels.npy"))
+    labels = np.load(join(feat_dir, dataset + f"_{split}_labels.npy"))
 
-    print(train_data.shape, labels.shape)
+    print(data.shape, labels.shape)
 
-    return train_data, labels
-
-
-def get_val_data():
-    val_data = np.load(join(feat_dir, dataset + "_test_feats.npy"))
-    val_data = np.reshape(val_data, [len(val_data), -1])
-
-    labels = np.load(join(feat_dir, dataset + "_test_labels.npy"))
-
-    print(val_data.shape, labels.shape)
-
-    return val_data, labels
+    return data, labels
 
 
-if __name__ == '__main__':
-    accs = []
-    train_data, train_labels = get_train_data()
-    val_data, val_labels = get_val_data()
-
+def eval_linear(model_type, train_data, train_labels, val_data, val_labels):
     model = get_model(model_type, train_data.shape[1])
 
     print(train_data.shape, val_data.shape, train_labels.shape, val_labels.shape)
@@ -72,3 +43,21 @@ if __name__ == '__main__':
     acc = model.score(val_data, val_labels)
 
     print("the acc is ", acc)
+    return acc
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='linear classification')
+
+    parser.add_argument('--feat_dir', type=str, default='./feats',
+                        help='directory containing features')
+    parser.add_argument('--dataset', required=True,
+                        choices=["cifar10", "svhn", "cifar_mnist_cifar", "cifar_mnist_mnist", "timagenet"])
+    parser.add_argument('--model_type', default="logistic", choices=["svm", "logistic", "nn"])
+
+    args = parser.parse_args()
+
+    feat_dir = args.feat_dir
+    dataset = args.dataset
+
+    eval_linear(args.model_type, *get_data(split='train'), *get_data(split='test'))
