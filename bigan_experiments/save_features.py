@@ -8,6 +8,8 @@ from torch.autograd import Variable
 from torchvision import datasets, transforms
 from tqdm import tqdm
 
+from cifar_dataset_mnist_eval import CIFAR10_MNIST
+
 join = os.path.join
 
 batch_size = 64
@@ -43,7 +45,7 @@ def get_embeddings(loader, netE, fname):
     all_embeddings = []
     all_targets = []
 
-    for idx, (data, target) in tqdm(enumerate(loader), total=min(100000, len(loader)//batch_size)):
+    for idx, (data, target) in tqdm(enumerate(loader), total=min(100000//batch_size, len(loader))):
         temp, h1, h2, h3 = netE.forward(Variable(tocuda(data)))
 
         temp = temp.view(temp.size(0), -1)
@@ -74,12 +76,16 @@ def get_data_loaders(args):
         val_dataset_cls = partial(datasets.CIFAR10, train=False)
 
     elif args.dataset == "cifar_mnist_cifar":
-        train_dataset_cls = partial(datasets.CIFAR10, aug_type=1, dataset="cifar", train=True)
-        val_dataset_cls = partial(datasets.CIFAR10, aug_type=1, dataset="cifar", train=False)
+        train_dataset_cls = partial(CIFAR10_MNIST, aug_type=1, dataset="cifar", train=True)
+        val_dataset_cls = partial(CIFAR10_MNIST, aug_type=1, dataset="cifar", train=False)
+
+    elif args.dataset == "cifar_mnist":
+        train_dataset_cls = partial(CIFAR10_MNIST, aug_type=1, dataset="all", train=True)
+        val_dataset_cls = partial(CIFAR10_MNIST, aug_type=1, dataset="all", train=False)
 
     elif args.dataset == "cifar_mnist_mnist":
-        train_dataset_cls = partial(datasets.CIFAR10, aug_type=1, dataset="mnist", train=True)
-        val_dataset_cls = partial(datasets.CIFAR10, aug_type=1, dataset="mnist", train=False)
+        train_dataset_cls = partial(CIFAR10_MNIST, aug_type=1, dataset="mnist", train=True)
+        val_dataset_cls = partial(CIFAR10_MNIST, aug_type=1, dataset="mnist", train=False)
 
     elif args.dataset == "timagenet":
         train_dataset_cls = datasets.ImageFolder

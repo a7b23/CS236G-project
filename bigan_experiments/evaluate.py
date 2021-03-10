@@ -26,7 +26,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', required=True,
                         help='cifar10 | svhn | cifar_mnist_cifar | cifar_mnist_mnist | timagenet',
-                        choices=['cifar10', 'svhn', 'cifar_mnist_mnist', 'cifar_mnist_cifar', 'timagenet'])
+                        choices=['cifar10', 'svhn', 'cifar_mnist', 'cifar_mnist_mnist', 'cifar_mnist_cifar',  'timagenet'])
 
     parser.add_argument('--dataroot', default="/atlas/u/a7b23/data", help='path to dataset')
     parser.add_argument('--use_cuda', type=bool, default=True)
@@ -54,9 +54,17 @@ if __name__ == "__main__":
     test_features, test_labels = get_embeddings(test_loader, netE, None)
 
     print("features inferred")
+    if opt.dataset != 'cifar_mnist':
+        knn_acc = eval_knn(train_features, train_labels, test_features, test_labels)
 
-    knn_acc = eval_knn(train_features, train_labels, test_features, test_labels)
+        logistic_acc = eval_linear('logistic', train_features, train_labels, test_features, test_labels)
 
-    logistic_acc = eval_linear('logistic', train_features, train_labels, test_features, test_labels)
+        print(f"KNN={knn_acc * 100:.2f}, Linear={logistic_acc * 100:.2f}")
+    else:
+        for idx, name in enumerate(['cifar', 'mnist']):
+            knn_acc = eval_knn(train_features, train_labels[:, idx], test_features, test_labels[:, idx])
 
-    print(f"KNN={knn_acc * 100:.2f}, Linear={logistic_acc * 100:.2f}")
+            logistic_acc = eval_linear('logistic', train_features, train_labels[:, idx], test_features,
+                                       test_labels[:, idx])
+
+            print(f"{name}: KNN={knn_acc * 100:.2f}, Linear={logistic_acc * 100:.2f}")

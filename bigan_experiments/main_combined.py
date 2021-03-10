@@ -45,8 +45,11 @@ if not opt.dataset == "timagenet":
 else:
     from model_timagenet import *
 
-wandb.init(project="cs236g-bigan", entity="a7b23", dir='./wandb', config=opt)
+wandb.init(project="cs236g-bigan-combined", entity="pagarwal", dir='/dfs/scratch2/prabhat8/cs236g/wandb', config=opt)
+opt.save_model_dir = os.path.join(opt.save_model_dir, wandb.run.id)
+opt.save_image_dir = os.path.join(opt.save_image_dir, wandb.run.id)
 print(opt)
+
 
 if not os.path.exists(opt.save_image_dir):
     os.makedirs(opt.save_image_dir)
@@ -216,13 +219,13 @@ for epoch in range(num_epochs):
 
         # Discriminator loss:
         # -(1-alpha) * log(D(E(x), x)
-        loss_d = (1.0 - opt.alpha - opt.beta) * criterion(output_real, real_label)
+        loss_d = (1.0 - opt.alpha) * criterion(output_real, real_label)
         # -alpha * log(D(E(x_aug), x_aug)))
         loss_d += opt.alpha * criterion(output_real_aug, real_label)
         # -beta * log(1-D(E(x_2), x_1)))
         loss_d += opt.beta * criterion(output_real_fake, fake_label)
         # -(1-beta) * log(1-D(z, G(z)))
-        loss_d += criterion(output_fake, fake_label)
+        loss_d += (1.0 - opt.beta) * criterion(output_fake, fake_label)
 
         # Generator loss: -log(D(z, G(z))) - log(1-D(E(x), x))
         loss_g = criterion(output_fake, real_label) + criterion(output_real, fake_label)
@@ -244,15 +247,15 @@ for epoch in range(num_epochs):
                       step=step)
 
         if i % 50 == 0:
-            vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake.png' % (opt.save_image_dir))
-            vutils.save_image(d_real.cpu().data[:16, ], './%s/real.png' % (opt.save_image_dir))
-            wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]],
-                       'reals': [wandb.Image(i) for i in d_real.cpu().data[:16, ]]}, step=step)
+            vutils.save_image(d_fake.cpu().data[:16, ], '%s/fake.png' % (opt.save_image_dir))
+            vutils.save_image(d_real.cpu().data[:16, ], '%s/real.png' % (opt.save_image_dir))
+            # wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]],
+            #            'reals': [wandb.Image(i) for i in d_real.cpu().data[:16, ]]}, step=step)
         i += 1
     if epoch % 25 == 0 or epoch == num_epochs - 1:
-        torch.save(netG.state_dict(), './%s/netG_epoch_%d.pth' % (opt.save_model_dir, epoch))
-        torch.save(netE.state_dict(), './%s/netE_epoch_%d.pth' % (opt.save_model_dir, epoch))
-        torch.save(netD.state_dict(), './%s/netD_epoch_%d.pth' % (opt.save_model_dir, epoch))
+        torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.save_model_dir, epoch))
+        torch.save(netE.state_dict(), '%s/netE_epoch_%d.pth' % (opt.save_model_dir, epoch))
+        torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.save_model_dir, epoch))
 
-        vutils.save_image(d_fake.cpu().data[:16, ], './%s/fake_%d.png' % (opt.save_image_dir, epoch))
+        vutils.save_image(d_fake.cpu().data[:16, ], '%s/fake_%d.png' % (opt.save_image_dir, epoch))
         wandb.log({'fakes': [wandb.Image(i) for i in d_fake.cpu().data[:16, ]]}, step=step)
