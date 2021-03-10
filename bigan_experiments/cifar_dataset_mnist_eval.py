@@ -75,7 +75,7 @@ class CIFAR10_MNIST(data.Dataset):
         if self.dataset == "cifar":
             return img, target
         elif self.dataset == "all":
-            return img, target, mnist_target
+            return img, torch.tensor([target, mnist_target])
         else:
             return img, mnist_target
 
