@@ -1,50 +1,92 @@
-# BigBiGAN-TensorFlow2.0
-## Introduction 
-An unofficical low-resolution (32 x 32) implementation of BigBiGAN  
-Paper: https://arxiv.org/abs/1907.02544
-### Architecture
-![bigbigan](https://github.com/LEGO999/BIgBiGAN/blob/master/fig/bigbigan.png)
-## Dependancy
-```
-Python 3.6
-TensorFlow 2.0.0
-Matplotlib 3.1.1
-Numpy 1.17
-```
-## Implementation
-### Generator and discriminator
-![biggan](https://github.com/LEGO999/BIgBiGAN/blob/master/fig/Screenshot%20from%202020-02-23%2017-02-01.png)
-Discriminator F and Generator G come from BigGAN.
-There are 3 residual blocks in G and 4 residual blocks in F.  
-Discriminator H und J are 6-layer MLP(units=64) with skip-connection.  
-### Encoder
-As suggested in the paper, take higher resolution input (64 x 64) and RevNet(13-layers) as backend.  
-After RevNet, a 4-layer MLP(Unit=256) is taken.  
-The Reversible Residual Network: Backpropagation Without Storing Activations(https://arxiv.org/abs/1707.04585)  
-## Usage
-Set up the flags in ```main.py```. In terminal, enter ```python3 main.py``` to execute the training.
-### Supported dataset:
-MNIST, Fashion-MNIST and CIFAR10.  
-### Conditional und unconditional GAN:
-Conditional GAN will use the labels in the corresponding dataset to generate class-specific images.
-### Channels und batch size:
-Change them to fit in your GPU according to your VRAM(>=6 GB recommended).  
+# CS236G-project
 
-## Conditional generation examples
-MNIST
-![mnist](https://github.com/LEGO999/BIgBiGAN/blob/master/fig/mnist2.png)
-Fashion-MNIST
-![fmnist](https://github.com/LEGO999/BIgBiGAN/blob/master/fig/fmnist-22.png)
-CIFAR10
-![cifar10](https://github.com/LEGO999/BigBiGAN-TensorFlow2.0/blob/master/fig/cifar10-con-49.png)
-## TODO
-- [ ] Stochastic encoder
-- [x] Projection discriminator
-## Known Issue
-Encoder may not work properly and and map generated images to the same latent vector.(Stochatic encoder may help)
-## Reference
-BigGAN https://github.com/taki0112/BigGAN-Tensorflow  
-RevNet https://github.com/google/revisiting-self-supervised
+### Training
+Run the following commands for different models as described below:
+#### Baseline BiGAN
 
-## Authors
-- ZHONG Liangyu, https://github.com/LEGO999
+##### Without Extra Image Discriminator
+```bash
+python main.py --use_image_discriminator False --batch_size 100 --num_epochs 100  --use_cuda --cuda_device 0
+  --dataset DATASET                 # one of cifar10, svhn, cifar_mnist, timagenet
+  --dataroot DATAROOT               # root path of the datasets
+  --save_model_dir SAVE_MODEL_DIR   # path to directory to save model checkpoints
+  --save_image_dir SAVE_IMAGE_DIR   # path to directory to save generated images
+```
+
+##### With Extra Image Discriminator
+```bash
+python main.py --use_image_discriminator True --batch_size 100 --num_epochs 100  --use_cuda --cuda_device 0
+  --dataset DATASET                 # one of cifar10, svhn, cifar_mnist, timagenet
+  --dataroot DATAROOT               # root path of the datasets
+  --save_model_dir SAVE_MODEL_DIR   # path to directory to save model checkpoints
+  --save_image_dir SAVE_IMAGE_DIR   # path to directory to save generated images
+```
+
+#### Extension of BiGAN with positive pair discrimination
+
+```bash
+python main_pos.py --use_cuda
+  --dataset DATASET                 # one of cifar10, svhn, cifar_mnist, timagenet
+  --alpha ALPHA                     # Weightage of the extra reals` loss
+  --dataroot DATAROOT               # root path of the datasets
+  --save_model_dir SAVE_MODEL_DIR   # path to directory to save model checkpoints
+  --save_image_dir SAVE_IMAGE_DIR   # path to directory to save generated images
+```
+
+#### Extension of BiGAN with negative pair discrimination
+
+```bash
+python main_neg.py --use_cuda
+  --dataset DATASET                 # one of cifar10, svhn, cifar_mnist, timagenet
+  --alpha ALPHA                     # Weightage of the extra fakes` loss
+  --dataroot DATAROOT               # root path of the datasets
+  --save_model_dir SAVE_MODEL_DIR   # path to directory to save model checkpoints
+  --save_image_dir SAVE_IMAGE_DIR   # path to directory to save generated images
+```
+
+
+#### Extension of BiGAN with both positive and negative pair discrimination
+
+```bash
+python main_combined.py --batch_size 100 --num_epochs 100 --use_cuda --cuda_device 0
+  --dataset DATASET                 # one of cifar10, svhn, cifar_mnist, timagenet
+  --alpha ALPHA                     # Weightage of the extra reals` loss
+  --beta BETA                       # Weightage of the extra fakes` loss
+  --dataroot DATAROOT               # root path of the datasets
+  --save_model_dir SAVE_MODEL_DIR   # path to directory to save model checkpoints
+  --save_image_dir SAVE_IMAGE_DIR   # path to directory to save generated images
+```
+
+### Evaluation
+
+#### To save the features, run -
+Generate and save the features of test dataset using a trained model for evaluation. 
+Run the following script with the parameters as specified below:
+```bash
+python save_features.py 
+    --dataset DATASET           # one of cifar10, svhn, cifar_mnist_mnist, cifar_mnist_cifar, timagenet
+    --feat_dir FEAT_DIR         # path to root directory to save the features
+    --model_path MODEL_PATH     # path of the checkpoint for the trained model
+    --dataroot DATAROOT         # root path of the datasets
+```
+
+After generating the features, run KNN or logistic classifier evaluation as specified below:
+#### KNN classification:
+
+```bash
+python nearest_neighbour_acc_1.py 
+    --dataset DATASET           # one of cifar10, svhn,cifar_mnist_mnist, cifar_mnist_cifar, timagenet
+    --feat_dir FEAT_DIR         # path to root directory to save the features
+```
+
+#### Logistic Regression
+```bash
+python classify_linear.py --model_type logistic
+    --dataset DATASET           # one of cifar10, svhn, cifar_mnist_mnist, cifar_mnist_cifar, timagenet
+    --feat_dir FEAT_DIR         # path to root directory to save the features
+
+```
+
+### Visualization
+
+To visualize the representation learned by the models, run the notebook Visualizations.ipynb in notebooks folder

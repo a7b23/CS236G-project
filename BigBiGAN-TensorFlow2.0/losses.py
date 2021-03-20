@@ -20,3 +20,44 @@ def gen_en_loss(real_f_output, real_h_output, real_j_output, fake_f_output, fake
 
     return real_loss + fake_loss
 
+
+def disc_loss_pos(real_f_output, real_h_output, real_j_output, real_h_output_aug, fake_f_output, fake_h_output, fake_j_output):
+
+    real_loss = tf.reduce_mean(tf.nn.relu(tf.ones_like(real_f_output) - real_f_output)
+                               + tf.nn.relu(tf.ones_like(real_h_output) - real_h_output)
+                               + tf.nn.relu(tf.ones_like(real_j_output) - real_j_output)
+                               + tf.nn.relu(tf.ones_like(real_h_output_aug) - real_h_output_aug))
+    
+    fake_loss = tf.reduce_mean(tf.nn.relu(tf.ones_like(fake_f_output) + fake_f_output)
+                               + tf.nn.relu(tf.ones_like(fake_h_output) + fake_h_output)
+                               + tf.nn.relu(tf.ones_like(fake_j_output) + fake_j_output))
+    total_loss = real_loss + fake_loss
+    return total_loss
+
+def disc_loss_neg(real_f_output, real_h_output, real_j_output, real_h_output_shuf, fake_f_output, fake_h_output, fake_j_output):
+
+    real_loss = tf.reduce_mean(tf.nn.relu(tf.ones_like(real_f_output) - real_f_output)
+                               + tf.nn.relu(tf.ones_like(real_h_output) - real_h_output)
+                               + tf.nn.relu(tf.ones_like(real_j_output) - real_j_output))
+    
+    fake_loss = tf.reduce_mean(tf.nn.relu(tf.ones_like(fake_f_output) + fake_f_output)
+                               + tf.nn.relu(tf.ones_like(fake_h_output) + fake_h_output)
+                               + tf.nn.relu(tf.ones_like(fake_j_output) + fake_j_output)
+                               + tf.nn.relu(tf.ones_like(real_h_output_shuf) + real_h_output_shuf))
+    
+    total_loss = real_loss + fake_loss
+    return total_loss
+
+def disc_loss_all(real_f_output, real_h_output, real_j_output, real_h_output_aug, real_h_output_shuf, fake_f_output, fake_h_output, fake_j_output):
+
+    real_loss = tf.reduce_mean(tf.nn.relu(tf.ones_like(real_f_output) - real_f_output)
+                               + tf.nn.relu(tf.ones_like(real_h_output) - real_h_output)
+                               + tf.nn.relu(tf.ones_like(real_j_output) - real_j_output)
+                               + tf.nn.relu(tf.ones_like(real_h_output_aug) - real_h_output_aug))
+    
+    fake_loss = tf.reduce_mean(tf.nn.relu(tf.ones_like(fake_f_output) + fake_f_output)
+                               + tf.nn.relu(tf.ones_like(fake_h_output) + fake_h_output)
+                               + tf.nn.relu(tf.ones_like(fake_j_output) + fake_j_output)
+                               + tf.nn.relu(tf.ones_like(real_h_output_shuf) + real_h_output_shuf))
+    total_loss = real_loss + fake_loss
+    return total_loss

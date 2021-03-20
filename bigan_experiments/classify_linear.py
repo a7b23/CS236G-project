@@ -6,6 +6,8 @@ from sklearn import svm
 from sklearn.linear_model import LogisticRegression
 
 from nn_model import Net
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
 
 join = os.path.join
 
@@ -14,8 +16,11 @@ def get_model(model_name, inp_size):
     if model_name == "svm":
         clf = svm.LinearSVC(random_state=0)
 
-    elif model_name == "logistic":
-        clf = LogisticRegression(random_state=0, max_iter=200)
+    elif model_name == "logistic_l2":
+        clf = make_pipeline(StandardScaler(), LogisticRegression(random_state=0))
+
+    elif model_name == "logistic_l1":
+        clf = make_pipeline(StandardScaler(), LogisticRegression(random_state=0, penalty='l1', solver='saga'))
 
     elif model_name == "nn":
         clf = Net(inp_size=inp_size, out_size=10)
